@@ -1,0 +1,10 @@
+srs_dir_path = "."
+dest_dir_path = "."
+output_file_postfix = "_FF_CUT_"
+
+dep_time_correction = 2.0
+time_start_offset = -60.0
+time_end_offset = 3.0
+
+min_accel_trigger = 50.0
+
