@@ -1,6 +1,7 @@
-srs_dir_path = "."
-dest_dir_path = "."
-output_file_postfix = "_FF_CUT_"
+srs_dir_path    = "D:\\DEV\\RUST\\VIDEO_TEMP"
+dest_dir_path   = "D:\\DEV\\RUST\\VIDEO_TEMP"
+ffmpeg_dir_path = "D:\\DEV\\RUST\\VIDEO_TEMP"
+output_file_postfix = "_FFCUT"
 
 dep_time_correction = 2.0
 time_start_offset = -60.0
