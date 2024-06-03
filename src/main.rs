@@ -33,6 +33,7 @@ const TIME_START_OFFSET  : f64 = -60.0;
 const TIME_END_OFFSET    : f64 = 3.0;
 
 const MIN_ACCEL_TRIGGER  : f64 = 50.0;
+const GLITCH_MARGIN      : f64 = 3.0;
 
 struct ConfigValues {
     srs_dir_path: String,
@@ -169,8 +170,6 @@ fn get_device_info(gpmf: &Gpmf) {
 }
 
 
-
-
 fn get_src_file_path(srs_dir_path: &str) -> Option<PathBuf> {
     let paths = fs::read_dir(srs_dir_path)
         .expect("Failed to read directory")
@@ -190,7 +189,6 @@ fn get_src_file_path(srs_dir_path: &str) -> Option<PathBuf> {
         None
     }
 }
-
 
 
 fn get_output_filename(src_file_path: &PathBuf, dest_dir_path: &str, output_file_postfix: &str) -> PathBuf {
@@ -219,7 +217,7 @@ fn get_output_filename(src_file_path: &PathBuf, dest_dir_path: &str, output_file
 fn parse_sensor_data_list(
     sensor_data_list: Vec<SensorData>,
     config_values: &ConfigValues
-) -> Result<(f64, f64), Result<(), std::io::Error>> {
+) -> Result<(f64, f64, f64), Result<(), std::io::Error>> {
     let max_accel_data_list = sensor_data_list
         .iter()
         .map(|data| max_xyz(data))
@@ -244,17 +242,22 @@ fn parse_sensor_data_list(
         return Err(Ok(()));
     }
     let deployment_time = max_accel_data.1 + config_values.dep_time_correction;
-    let mut target_start_time = deployment_time + config_values.time_start_offset;
+
+    let mut target_start_time = deployment_time + config_values.time_start_offset - GLITCH_MARGIN;
+    let mut glitch_margin:f64 = GLITCH_MARGIN;
     if target_start_time < 0.0 {
-        target_start_time = 0.0
-    }
-    let target_end_time = deployment_time + config_values.time_end_offset;
-    let target_duration = target_end_time - target_start_time;
+        target_start_time = 0.0;
+        glitch_margin = 0.0;
+    };
+
+    let target_end_time   = deployment_time + config_values.time_end_offset;
+
     println!(
         "max_datablock: {:?} st_time: {:?} end_time: {:?} duration: {:?}\n",
-        max_accel_data, target_start_time, target_end_time, target_duration
+        max_accel_data, target_start_time, target_end_time, (target_end_time - target_start_time)
     );
-    Ok((target_start_time, target_duration))
+
+    Ok((target_start_time, target_end_time, glitch_margin))
 }
 
 
@@ -279,7 +282,7 @@ fn main() -> std::io::Result<()> {
 
 
     let sensor_data_list = gpmf.sensor(&SensorType::Accelerometer);
-    let (target_start_time, target_duration) = match parse_sensor_data_list(
+    let (target_start_time, target_end_time, glitch_margin) = match parse_sensor_data_list(
         sensor_data_list,
         &config_values
     ) {
@@ -296,20 +299,23 @@ fn main() -> std::io::Result<()> {
 
 
 
-    // __promt_to_exit("FFMPEG DISABLED");
-    // return Ok(());
 
     match Command::new(format!("{}{}", config_values.ffmpeg_dir_path, "/ffmpeg"))
         .stdin(Stdio::null())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
-        // .arg("-n")
-        .args(["-i", src_file_path.to_str().unwrap()])
-        .args(["-ss", target_start_time.to_string().as_str()])
-        .args(["-t", target_duration.to_string().as_str()])
-        .args(["-c", "copy"])
-        .arg("-y")
+
+        .arg("-ss").arg(target_start_time.to_string())
+        .arg("-to").arg(target_end_time.to_string())
+
+        .arg("-i").arg(&src_file_path)
+
+        .arg("-ss").arg(glitch_margin.to_string())
+        .arg("-c").arg("copy")
+
         .arg(&output_file_path)
+        .arg("-y")
+
         .spawn() {
             Ok(_) => println!("FFmpeg executed successfully."),
             Err(e) => eprintln!(
@@ -324,7 +330,5 @@ fn main() -> std::io::Result<()> {
 
     Ok(())
 }
-
-
 
 
