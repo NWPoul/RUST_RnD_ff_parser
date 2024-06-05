@@ -22,6 +22,9 @@ pub mod file_sys_serv;
 pub mod gpmf_serv;
 pub mod ffmpeg_serv;
 
+mod cli_clonfig;
+use cli_clonfig::get_resulting_config;
+
 
 use file_sys_serv::{
     get_src_file_path,
@@ -63,6 +66,10 @@ configValues!(
 fn main() -> std::io::Result<()> {
     let config_values = get_config_values();
 
+    let config_values = get_resulting_config(config_values);
+    // println!("cli_args: {:?}", config_values);
+
+
     let src_file_path = match get_src_file_path(&config_values.srs_dir_path) {
         Some(path) => path,
         None => {
@@ -76,10 +83,7 @@ fn main() -> std::io::Result<()> {
     gpmf_serv::get_device_info(&gpmf);
 
 
-    let (
-        target_start_time,
-        target_end_time,
-    ) = match gpmf_serv::parse_sensor_data(&gpmf, &config_values) {
+    let target_start_end_time = match gpmf_serv::parse_sensor_data(&gpmf, &config_values) {
         Ok(value)  => value,
         Err(value) => return value,
     };
@@ -95,13 +99,13 @@ fn main() -> std::io::Result<()> {
     // return Ok(());
 
     let ffmpeg_status = run_ffmpeg(
-        config_values,
-        target_start_time, target_end_time,
-        &src_file_path   , &output_file_path,
+        target_start_end_time,
+        (&src_file_path, &output_file_path ),
+        &config_values.ffmpeg_dir_path,
     );
 
     match ffmpeg_status {
-        Ok(_) => println!("FFmpeg executed successfully."),
+        Ok(_)  => println!("FFmpeg executed successfully."),
         Err(e) => eprintln!(
             "Failed to execute FFmpeg: {:?}", e
         ),

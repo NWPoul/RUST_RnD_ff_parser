@@ -9,7 +9,7 @@
 //     min_accel_trigger: f64,
 // }
 
-// fn get_config_values() -> ConfigValues {
+// fn old_get_config_values() -> ConfigValues {
 //     let mut settings = Config::default();
 //     if let Err(e) = settings.merge(Cfg_file::with_name("config.toml")) {
 //         println!("Failed to load configuration file: {}", e);
@@ -60,11 +60,15 @@
 //     }
 // }
 
+
+
+
 #[macro_export]
 macro_rules! configValues {
     ($(($var:ident, $type:ty, $default:expr)),*) => {
+        #[derive(Debug)]
         pub struct ConfigValues {
-            $($var:$type,)*
+            $(pub $var:$type),*
         }
 
         pub fn get_config_values() -> ConfigValues {
@@ -85,7 +89,7 @@ macro_rules! configValues {
             println!();
 
             ConfigValues {
-                $($var,)*
+                $($var),*
             }
         }
     };
