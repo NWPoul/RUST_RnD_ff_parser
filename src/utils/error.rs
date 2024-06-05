@@ -1,4 +1,5 @@
 //! Main Crate Error
+#![allow(unused)] // For beginning only.
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
