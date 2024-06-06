@@ -13,6 +13,7 @@ pub mod utils {
 }
 
 
+use rfd::FileDialog;
 use config::{Config, File as Cfg_file};
 use gpmf_rs::Gpmf;
 
@@ -32,6 +33,10 @@ use file_sys_serv::{
 };
 
 use ffmpeg_serv::run_ffmpeg;
+// mod gui_iced;
+// use iced::Settings;
+
+
 
 
 
@@ -68,17 +73,29 @@ fn main() -> std::io::Result<()> {
     let config_values = get_cli_merged_config(config_values);
 
 
-    let src_file_path = match get_src_file_path(&config_values.srs_dir_path) {
-        Some(path) => path,
-        None => {
-            utils::promt_to_exit("NO MP4 FILES FOUND!");
-            return Ok(());
-        }
-    };
+    // let src_file_path = match get_src_file_path(&config_values.srs_dir_path) {
+    //     Some(path) => path,
+    //     None => {
+    //         utils::promt_to_exit("NO MP4 FILES FOUND!");
+    //         return Ok(());
+    //     }
+    // };
 
-    let gpmf = Gpmf::new(&src_file_path, false)?;
+    let src_file_path = match FileDialog::new()
+        .add_filter("mp4", &["mp4", "MP4"])
+        .set_directory(&config_values.srs_dir_path)
+        .pick_file() {
+            Some(file_path) => file_path,
+            None => {
+                utils::promt_to_exit("NO MP4 FILES CHOSEN!");
+                return Ok(());
+            }
+        };
 
-    gpmf_serv::get_device_info(&gpmf);
+
+        let gpmf = Gpmf::new(&src_file_path, false)?;
+
+        gpmf_serv::get_device_info(&gpmf);
 
 
     let target_start_end_time = match gpmf_serv::parse_sensor_data(&gpmf, &config_values) {
@@ -116,5 +133,4 @@ fn main() -> std::io::Result<()> {
 
     Ok(())
 }
-
 
