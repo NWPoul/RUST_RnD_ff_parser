@@ -23,7 +23,7 @@ pub mod gpmf_serv;
 pub mod ffmpeg_serv;
 
 mod cli_clonfig;
-use cli_clonfig::get_resulting_config;
+use cli_clonfig::get_cli_merged_config;
 
 
 use file_sys_serv::{
@@ -65,9 +65,7 @@ configValues!(
 
 fn main() -> std::io::Result<()> {
     let config_values = get_config_values();
-
-    let config_values = get_resulting_config(config_values);
-    // println!("cli_args: {:?}", config_values);
+    let config_values = get_cli_merged_config(config_values);
 
 
     let src_file_path = match get_src_file_path(&config_values.srs_dir_path) {
