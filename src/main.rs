@@ -33,10 +33,6 @@ use file_sys_serv::{
 };
 
 use ffmpeg_serv::run_ffmpeg;
-// mod gui_iced;
-// use iced::Settings;
-
-
 
 
 
@@ -120,17 +116,21 @@ fn main() -> std::io::Result<()> {
     );
 
     match ffmpeg_status {
-        Ok(_)  => println!("FFmpeg executed successfully."),
-        Err(e) => eprintln!(
-            "Failed to execute FFmpeg: {:?}", e
-        ),
+        Ok(_)  => {
+            utils::promt_to_exit(format!(
+                "Video has been successfully cut and saved as {}",
+                output_file_path.display()
+            ).as_str());
+        
+            Ok(())
+        },
+        Err(e) => {
+            eprintln!("Failed to execute FFmpeg: {:?} to {:?}", e, output_file_path.display() );
+            utils::promt_to_exit("ERR END");
+        
+            Ok(())
+        },
     }
 
-    utils::promt_to_exit(format!(
-        "Video has been successfully cut and saved as {}",
-        output_file_path.display()
-    ).as_str());
-
-    Ok(())
 }
 
