@@ -16,6 +16,8 @@ fn check_get_ffmpeg(ffmpeg_dir_path: &str) -> Result<PathBuf, std::io::Error> {
     eprintln!("\nffmpeg not found at {:?}... trying sys PATH", &ffmpeg_path);
     let output = Command::new("ffmpeg")
         .arg("-version")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .output();
 
     match output {
@@ -56,8 +58,9 @@ pub fn run_ffmpeg(
 
     let ffmpeg_status = Command::new(&ffmpeg_path)
         .stdin(Stdio::null())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
+
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .arg("-ss")
         .arg(start_time.to_string())
         .arg("-to")

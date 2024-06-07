@@ -1,6 +1,4 @@
 
-// use crate::prelude::*;
-// mod prelude;
 
 pub mod utils {
     pub mod error;
@@ -9,10 +7,10 @@ pub mod utils {
     pub use u_serv::abs_max;
 }
 
-use std::path::PathBuf;
+use std::{fmt::format, path::PathBuf};
 use rfd::FileDialog;
 use config::{Config, File as Cfg_file};
-use gpmf_rs::Gpmf;
+use gpmf_rs::{gpmf::value, Gpmf};
 
 
 pub mod macros;
@@ -56,7 +54,7 @@ configValues!(
 );
 
 
-pub fn parse_mp4_file(src_file_path: PathBuf, config_values: ConfigValues)-> Result<std::process::Child, std::io::Error> {
+pub fn parse_mp4_file(src_file_path: PathBuf, config_values: ConfigValues) -> Result<std::process::Child, std::io::Error> {
     let gpmf = Gpmf::new(&src_file_path, false)?;
 
     gpmf_serv::get_device_info(&gpmf);
@@ -86,6 +84,19 @@ pub fn parse_mp4_file(src_file_path: PathBuf, config_values: ConfigValues)-> Res
 }
 
 
+pub fn parse_mp4_files(
+    src_files_path_list: Vec<PathBuf>,
+    config_values      : ConfigValues
+) -> Vec<Result<std::process::Child, std::io::Error>> {
+    let mut result_list:Vec<Result<std::process::Child, std::io::Error>> = vec![];
+
+    for src_file_path in src_files_path_list {
+        let ind_res = parse_mp4_file(src_file_path, config_values.clone());
+        result_list.push(ind_res);
+    };
+    result_list
+}
+
 
 
 
@@ -103,9 +114,15 @@ fn main() {
             }
         };
 
-    for src_file_path in src_files_path_list {
-        let _ = parse_mp4_file(src_file_path, config_values.clone());
-    }
+    let parsing_result = parse_mp4_files(src_files_path_list, config_values.clone());
+
+    println!("\nPARSING RESULTS:");
+    for res in parsing_result {
+        match res {
+            Ok(content) => println!("OK: {:?}", content),
+            Err(error)  => println!("ERR: {error}")
+        };
+    };
 
     promptExit!("\nEND");
 }
