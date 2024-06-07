@@ -60,13 +60,25 @@
 //     }
 // }
 
-
+#[macro_export]
+macro_rules! promptExit {
+    ($msg: expr) => {
+        crate::utils::u_serv::prompt_to_exit($msg);
+        return;
+    };
+}
+// macro_rules! promptExit_Ok {
+//     ($msg: expr) => {
+//         crate::utils::u_serv::prompt_to_exit($msg);
+//         return Ok(());
+//     };
+// }
 
 
 #[macro_export]
 macro_rules! configValues {
     ($(($var:ident, $type:ty, $default:expr)),*) => {
-        #[derive(Debug)]
+        #[derive(Debug, Clone)]
         pub struct ConfigValues {
             $(pub $var:$type),*
         }

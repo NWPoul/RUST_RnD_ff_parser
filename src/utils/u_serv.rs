@@ -1,4 +1,4 @@
-pub fn promt_to_exit(msg: &str) {
+pub fn prompt_to_exit(msg: &str) {
     println!("{}\nPress 'enter' to exit...\n", {msg});
     let mut input = String::new();
     std::io::stdin()

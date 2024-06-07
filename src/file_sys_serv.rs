@@ -23,7 +23,11 @@ pub fn get_src_file_path(srs_dir_path: &str) -> Option<PathBuf> {
 }
 
 
-pub fn get_output_filename(src_file_path: &PathBuf, dest_dir_path: &str, output_file_postfix: &str) -> PathBuf {
+pub fn get_output_filename(
+    src_file_path      : &PathBuf,
+    dest_dir_path      : &str,
+    output_file_postfix: &str
+) -> PathBuf {
     let mut dest_dir_path = PathBuf::from(dest_dir_path);
     if !dest_dir_path.exists() {
         println!("dest_dir_path : {:?} don't exist\n", dest_dir_path);

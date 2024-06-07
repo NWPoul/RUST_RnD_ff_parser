@@ -47,7 +47,7 @@ pub fn get_device_info(gpmf: &Gpmf) {
 pub fn parse_sensor_data(
     gpmf: &Gpmf,
     config_values: &ConfigValues
-) -> Result<(f64, f64), Result<(), std::io::Error>> {
+) -> Result<(f64, f64), String> {
     let sensor_data_list = gpmf.sensor(&SensorType::Accelerometer);
     let max_accel_data_list = sensor_data_list
         .iter()
@@ -65,13 +65,14 @@ pub fn parse_sensor_data(
             },
         );
     if max_accel_data.0 < config_values.min_accel_trigger {
-        println!(
-            "No deployment detected (min acc required is {:?})! max_datablock: {:?}\n",
+        let err_msg = format!("No deployment detected (min acc required is {:?})! max_datablock: {:?}\n",
             config_values.min_accel_trigger,
             max_accel_data
         );
-        return Err(Ok(()));
+        eprintln!("{err_msg}");
+        return Err(err_msg);
     }
+
     let deployment_time = max_accel_data.1 + config_values.dep_time_correction;
 
     let mut target_start_time = deployment_time + config_values.time_start_offset;

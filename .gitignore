@@ -2,7 +2,7 @@
 .*
 !.gitignore
 
-# Allow vscode 
+# Allow vscode
 # !.vscode
 
 # By default
@@ -41,3 +41,4 @@ report.*.json
 *.jpeg
 *.jpg
 *.png
+config.toml
