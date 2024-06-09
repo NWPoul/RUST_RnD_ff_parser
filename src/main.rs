@@ -7,10 +7,15 @@ pub mod utils {
     pub use u_serv::abs_max;
 }
 
-use std::{fmt::format, path::PathBuf};
+use std::{
+    path::PathBuf,
+    process::Child,
+    io::Error as IOError,
+};
+
 use rfd::FileDialog;
 use config::{Config, File as Cfg_file};
-use gpmf_rs::{gpmf::value, Gpmf};
+use gpmf_rs:: Gpmf;
 
 
 pub mod macros;
@@ -54,15 +59,15 @@ configValues!(
 );
 
 
-pub fn parse_mp4_file(src_file_path: PathBuf, config_values: ConfigValues) -> Result<std::process::Child, std::io::Error> {
+pub fn parse_mp4_file(src_file_path: PathBuf, config_values: ConfigValues) -> Result<Child, IOError> {
     let gpmf = Gpmf::new(&src_file_path, false)?;
 
     gpmf_serv::get_device_info(&gpmf);
 
     let target_start_end_time = match gpmf_serv::parse_sensor_data(&gpmf, &config_values) {
-        Ok(value)  => value,
+        Ok(value) => value,
         Err(err_msg) => return Err(
-            std::io::Error::new(std::io::ErrorKind::Other, err_msg)
+            IOError::new(std::io::ErrorKind::Other, err_msg)
         ),
     };
 
@@ -87,22 +92,32 @@ pub fn parse_mp4_file(src_file_path: PathBuf, config_values: ConfigValues) -> Re
 pub fn parse_mp4_files(
     src_files_path_list: Vec<PathBuf>,
     config_values      : ConfigValues
-) -> Vec<Result<std::process::Child, std::io::Error>> {
-    let mut result_list:Vec<Result<std::process::Child, std::io::Error>> = vec![];
+) -> Vec<Result<Child, IOError>> {
+    let mut result_list:Vec<Result<Child, IOError>> = vec![];
 
     for src_file_path in src_files_path_list {
-        let ind_res = parse_mp4_file(src_file_path, config_values.clone());
-        result_list.push(ind_res);
+        let file_res = parse_mp4_file(src_file_path, config_values.clone());
+        result_list.push(file_res);
     };
     result_list
+}
+
+fn print_parsing_results(parsing_result: Vec<Result<Child, IOError>>) {
+    println!("\nPARSING RESULTS:");
+    for res in parsing_result {
+        match res {
+            Ok(content) => println!("OK: {content:?}"),
+            Err(error)  => println!("ERR: {error}")
+        }
+    }
 }
 
 
 
 
 fn main() {
-    let config_values = get_config_values();
-    let config_values = get_cli_merged_config(config_values);
+    let mut config_values = get_config_values();
+    config_values = get_cli_merged_config(config_values);
 
     let src_files_path_list = match FileDialog::new()
         .add_filter("mp4", &["mp4", "MP4"])
@@ -116,13 +131,7 @@ fn main() {
 
     let parsing_result = parse_mp4_files(src_files_path_list, config_values.clone());
 
-    println!("\nPARSING RESULTS:");
-    for res in parsing_result {
-        match res {
-            Ok(content) => println!("OK: {:?}", content),
-            Err(error)  => println!("ERR: {error}")
-        };
-    };
+    print_parsing_results(parsing_result);
 
     promptExit!("\nEND");
 }

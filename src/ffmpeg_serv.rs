@@ -15,7 +15,7 @@ fn check_get_ffmpeg(ffmpeg_dir_path: &str) -> Result<PathBuf, std::io::Error> {
 
     eprintln!("\nffmpeg not found at {:?}... trying sys PATH", &ffmpeg_path);
     let output = Command::new("ffmpeg")
-        .arg("-version")
+        // .arg("-version")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .output();
@@ -56,11 +56,35 @@ pub fn run_ffmpeg(
 
     let ffmpeg_path = check_get_ffmpeg(ffmpeg_dir_path)?;
 
+    // let ffmpeg_command = format!(
+    //     r#"{} -ss {} -to {} -i "{}" -ss {} -c copy "{}" -y"#,
+    //     ffmpeg_path.to_string_lossy(),
+    //     start_time,
+    //     end_time,
+    //     src_file_path.to_string_lossy(),
+    //     glitch_margin,
+    //     output_file_path.to_string_lossy()
+    // );
+
+    // let ffmpeg_status2 = Command::new("cmd")
+    // .args(&[
+    //     "/c",
+    //     "start",
+    //     "cmd",
+    //     "/k",
+    //     "echo Hello && pause",
+    // ])
+    //     .stdin(Stdio::null()) // No input needed
+    //     .stdout(Stdio::inherit()) // Output shown in the new window
+    //     .stderr(Stdio::inherit()) // Error messages shown in the new window
+    //     .spawn();
+
+
     let ffmpeg_status = Command::new(&ffmpeg_path)
         .stdin(Stdio::null())
-
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .arg("-hide_banner")
         .arg("-ss")
         .arg(start_time.to_string())
         .arg("-to")

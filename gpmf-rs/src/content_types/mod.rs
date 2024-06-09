@@ -1,5 +1,5 @@
 //! Processing of GPS and various kinds of sensor data.
-
+#![allow(unused_imports)]
 use time::{PrimitiveDateTime, format_description};
 
 use crate::GpmfError;
