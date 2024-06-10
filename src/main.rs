@@ -66,9 +66,11 @@ pub fn parse_mp4_file(src_file_path: PathBuf, config_values: ConfigValues) -> Re
 
     let target_start_end_time = match gpmf_serv::parse_sensor_data(&gpmf, &config_values) {
         Ok(value) => value,
-        Err(err_msg) => return Err(
+        Err(err_msg) => {
+            println!("target_start_end_time ERR");
+            return Err(
             IOError::new(std::io::ErrorKind::Other, err_msg)
-        ),
+        )},
     };
 
     let output_file_path = get_output_filename(

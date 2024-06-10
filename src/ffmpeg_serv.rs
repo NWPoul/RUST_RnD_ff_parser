@@ -56,34 +56,19 @@ pub fn run_ffmpeg(
 
     let ffmpeg_path = check_get_ffmpeg(ffmpeg_dir_path)?;
 
-    // let ffmpeg_command = format!(
-    //     r#"{} -ss {} -to {} -i "{}" -ss {} -c copy "{}" -y"#,
-    //     ffmpeg_path.to_string_lossy(),
-    //     start_time,
-    //     end_time,
-    //     src_file_path.to_string_lossy(),
-    //     glitch_margin,
-    //     output_file_path.to_string_lossy()
-    // );
 
-    // let ffmpeg_status2 = Command::new("cmd")
-    // .args(&[
-    //     "/c",
-    //     "start",
-    //     "cmd",
-    //     "/k",
-    //     "echo Hello && pause",
-    // ])
-    //     .stdin(Stdio::null()) // No input needed
-    //     .stdout(Stdio::inherit()) // Output shown in the new window
-    //     .stderr(Stdio::inherit()) // Error messages shown in the new window
-    //     .spawn();
-
-
-    let ffmpeg_status = Command::new(&ffmpeg_path)
+    let ffmpeg_status = Command::new("cmd")
+    .args(&[
+        "/c",
+        "start",
+        "cmd",
+        "/k",
+        &ffmpeg_path.to_string_lossy(),
+    ])
         .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+
         .arg("-hide_banner")
         .arg("-ss")
         .arg(start_time.to_string())
