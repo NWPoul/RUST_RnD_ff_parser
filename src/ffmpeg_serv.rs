@@ -7,6 +7,7 @@ use std::path::PathBuf;
 pub const GLITCH_MARGIN: f64 = 3.0;
 
 
+
 fn check_get_ffmpeg(ffmpeg_dir_path: &str) -> Result<PathBuf, std::io::Error> {
     let ffmpeg_path = PathBuf::from(ffmpeg_dir_path).join("ffmpeg.exe");
     if ffmpeg_path.exists() {
@@ -15,7 +16,6 @@ fn check_get_ffmpeg(ffmpeg_dir_path: &str) -> Result<PathBuf, std::io::Error> {
 
     eprintln!("\nffmpeg not found at {:?}... trying sys PATH", &ffmpeg_path);
     let output = Command::new("ffmpeg")
-        // .arg("-version")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .output();
@@ -46,7 +46,7 @@ pub fn run_ffmpeg(
     let (mut start_time, end_time) = target_start_end_time;
     let (src_file_path, output_file_path) = files_path;
 
-    let glitch_margin: f64 = if start_time >= GLITCH_MARGIN {
+    let glitch_margin:f64 = if start_time >= GLITCH_MARGIN {
         GLITCH_MARGIN
     } else {
         start_time
@@ -56,28 +56,20 @@ pub fn run_ffmpeg(
 
     let ffmpeg_path = check_get_ffmpeg(ffmpeg_dir_path)?;
 
-
     let ffmpeg_status = Command::new("cmd")
-    .args(&[
-        "/c",
-        "start",
-        "cmd",
-        "/k",
-        &ffmpeg_path.to_string_lossy(),
-    ])
-        .stdin(Stdio::null())
+        .args(&[
+            "/c start cmd /k",
+            &ffmpeg_path.to_string_lossy(),
+        ])
+        .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
 
         .arg("-hide_banner")
-        .arg("-ss")
-        .arg(start_time.to_string())
-        .arg("-to")
-        .arg(end_time.to_string())
-        .arg("-i")
-        .arg(src_file_path)
-        .arg("-ss")
-        .arg(glitch_margin.to_string())
+        .arg("-ss").arg(start_time.to_string())
+        .arg("-to").arg(end_time.to_string())
+        .arg("-i" ).arg(src_file_path)
+        .arg("-ss").arg(glitch_margin.to_string())
         .arg("-c")
         .arg("copy")
         .arg(output_file_path)

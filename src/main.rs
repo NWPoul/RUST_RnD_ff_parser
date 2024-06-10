@@ -3,7 +3,6 @@
 pub mod utils {
     pub mod error;
     pub mod u_serv;
-
     pub use u_serv::abs_max;
 }
 
@@ -15,7 +14,7 @@ use std::{
 
 use rfd::FileDialog;
 use config::{Config, File as Cfg_file};
-use gpmf_rs:: Gpmf;
+use gpmf_rs::Gpmf;
 
 
 pub mod macros;
@@ -42,9 +41,7 @@ const DEP_TIME_CORRECTION: f64 = 2.0;
 const TIME_START_OFFSET  : f64 = -60.0;
 const TIME_END_OFFSET    : f64 = 3.0;
 
-const MIN_ACCEL_TRIGGER  : f64 = 50.0;
-
-pub const GLITCH_MARGIN  : f64 = 3.0;
+const MIN_ACCEL_TRIGGER  : f64 = 35.0;
 
 
 configValues!(
@@ -64,7 +61,7 @@ pub fn parse_mp4_file(src_file_path: PathBuf, config_values: ConfigValues) -> Re
 
     gpmf_serv::get_device_info(&gpmf);
 
-    let target_start_end_time = match gpmf_serv::parse_sensor_data(&gpmf, &config_values) {
+    let target_start_end_time = match gpmf_serv::parse_sensor_data(&gpmf, &config_values, &src_file_path) {
         Ok(value) => value,
         Err(err_msg) => {
             println!("target_start_end_time ERR");
@@ -79,6 +76,7 @@ pub fn parse_mp4_file(src_file_path: PathBuf, config_values: ConfigValues) -> Re
         &config_values.output_file_postfix
     );
 
+    return Err(IOError::new(std::io::ErrorKind::Other, "Command disabled"));
     // promptExit!("Command disabled" );
 
     let ffmpeg_status = run_ffmpeg(

@@ -3,6 +3,8 @@ use gpmf_rs::{
 };
 
 
+use std::path::PathBuf;
+
 use crate::utils;
 use crate::ConfigValues;
 
@@ -32,10 +34,7 @@ pub fn get_device_info(gpmf: &Gpmf) {
     let optional_string : Option<String> = (&device_id).into();
 
     println!("device_name: {:?}", device_name);
-    println!("device_id:
-        u32: {:?}
-        FourCC: {:?}
-        string: {:?}\n",
+    println!("device_id: u32: {:?} FourCC: {:?} string: {:?}\n",
         optional_u32.unwrap_or_default(),
         optional_four_cc.unwrap_or_default(),
         optional_string.unwrap_or_default()
@@ -46,24 +45,29 @@ pub fn get_device_info(gpmf: &Gpmf) {
 
 pub fn parse_sensor_data(
     gpmf: &Gpmf,
-    config_values: &ConfigValues
+    config_values: &ConfigValues,
+    src_file_path: &PathBuf,
 ) -> Result<(f64, f64), String> {
     let sensor_data_list = gpmf.sensor(&SensorType::Accelerometer);
+
     let max_accel_data_list = sensor_data_list
         .iter()
         .map(|data| max_xyz(data))
         .collect::<Vec<_>>();
-    let max_accel_data =
-        max_accel_data_list.iter().fold(
-            (0., 0.),
-            |acc, val| {
-                if val.0 > acc.0 {
-                    *val
-                } else {
-                    acc
-                }
-            },
-        );
+
+    crate::file_sys_serv::save_log_to_txt(&max_accel_data_list, src_file_path);
+
+    let max_accel_data = max_accel_data_list.iter().fold(
+        (0., 0.),
+        |acc, val| {
+            if val.0 > acc.0 {
+                *val
+            } else {
+                acc
+            }
+        },
+    );
+
     if max_accel_data.0 < config_values.min_accel_trigger {
         let err_msg = format!("No deployment detected (min acc required is {:?})! max_datablock: {:?}\n",
             config_values.min_accel_trigger,

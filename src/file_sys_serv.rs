@@ -2,6 +2,24 @@ use std::fs;
 use std::path::PathBuf;
 
 
+
+pub fn save_log_to_txt(max_accel_data_list: &Vec<(f64, f64)>, file_path: &PathBuf) {
+    use std::fs::File;
+    use std::io::Write;
+
+    let srs_file_name = file_path.file_name().unwrap().to_str().unwrap();
+    let log_file_name = format!("max_accel_{}.txt", srs_file_name);
+
+    let mut file = File::create(log_file_name).expect("Failed to create file");
+
+    for data in max_accel_data_list.iter() {
+        let (acc_data, sec) = data;
+        writeln!(file, "{:?}\t{:?}", sec.trunc() as u64, acc_data.round() as u64)
+            .expect("Failed to write to file");
+    }
+}
+
+
 pub fn get_src_file_path(srs_dir_path: &str) -> Option<PathBuf> {
     let paths = fs::read_dir(srs_dir_path)
         .expect("Failed to read directory")
