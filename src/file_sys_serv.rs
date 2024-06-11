@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 
 
-pub fn save_log_to_txt(max_accel_data_list: &Vec<(f64, f64)>, file_path: &PathBuf) {
+pub fn save_log_to_txt(max_accel_data_list: &Vec<(f64, f64, f64)>, file_path: &PathBuf) {
     use std::fs::File;
     use std::io::Write;
 
@@ -13,11 +13,31 @@ pub fn save_log_to_txt(max_accel_data_list: &Vec<(f64, f64)>, file_path: &PathBu
     let mut file = File::create(log_file_name).expect("Failed to create file");
 
     for data in max_accel_data_list.iter() {
-        let (acc_data, sec) = data;
-        writeln!(file, "{:?}\t{:?}", sec.trunc() as u64, acc_data.round() as u64)
+        let (sec, acc_data_max, acc_data_skv) = data;
+        writeln!(
+            file,
+            "{:?}\t{:?}\t{:?}", sec.trunc() as u64, acc_data_max.round() as u64, acc_data_skv.round() as u64)
             .expect("Failed to write to file");
     }
 }
+
+pub fn save_det_log_to_txt(data_list: &Vec<(f64)>, file_path: &PathBuf) {
+    use std::fs::File;
+    use std::io::Write;
+
+    let srs_file_name = file_path.file_name().unwrap().to_str().unwrap();
+    let log_file_name = format!("max_accel_{}.txt", srs_file_name);
+
+    let mut file = File::create(log_file_name).expect("Failed to create file");
+
+    for data in data_list.iter() {
+        writeln!(
+            file,
+            "{:?}", data.round() as u64)
+            .expect("Failed to write to file");
+    }
+}
+
 
 
 pub fn get_src_file_path(srs_dir_path: &str) -> Option<PathBuf> {

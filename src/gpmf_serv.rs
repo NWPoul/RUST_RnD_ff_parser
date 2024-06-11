@@ -24,6 +24,25 @@ fn max_xyz(data: &SensorData) -> (f64, f64) {
     )
 }
 
+fn max_skv_xyz(data: &SensorData) -> (f64, f64) {
+    let total_squared_magnitude = data.fields.iter().fold(0., |acc, f| {
+        let cur_skv = (f.x.powi(2) + f.y.powi(2) + f.z.powi(2)).sqrt();
+        if cur_skv > acc {cur_skv} else {acc}
+    });
+    (
+        total_squared_magnitude,
+        data.timestamp.unwrap_or_default().as_seconds_f64().trunc(),
+    )
+}  
+
+fn vec_skv_xyz(data: &SensorData) -> Vec<f64> {
+    data.fields
+        .iter()
+        .map(|f| (f.x.powi(2) + f.y.powi(2) + f.z.powi(2)).sqrt())
+        .collect()
+}
+
+
 
 pub fn get_device_info(gpmf: &Gpmf) {
     let device_name = gpmf.device_name();
@@ -55,23 +74,39 @@ pub fn parse_sensor_data(
         .map(|data| max_xyz(data))
         .collect::<Vec<_>>();
 
-    crate::file_sys_serv::save_log_to_txt(&max_accel_data_list, src_file_path);
+    let max_log_acc_data_list = sensor_data_list
+        .iter()
+        .map(|data| (max_xyz(data).1, max_xyz(data).0, max_skv_xyz(data).0))
+        .collect::<Vec<_>>();
 
-    let max_accel_data = max_accel_data_list.iter().fold(
-        (0., 0.),
-        |acc, val| {
-            if val.0 > acc.0 {
-                *val
-            } else {
-                acc
-            }
-        },
-    );
+
+
+    let max_det_log_acc_data_list = sensor_data_list
+        .iter()
+        .flat_map(|data| vec_skv_xyz(data))
+        .collect::<Vec<_>>();
+
+    crate::file_sys_serv::save_log_to_txt(&max_log_acc_data_list, src_file_path);
+    crate::file_sys_serv::save_det_log_to_txt(&max_det_log_acc_data_list, src_file_path);
+
+
+
+    let max_accel_data =
+        max_accel_data_list.iter().fold(
+            (0., 0.),
+            |acc, val| {
+                if val.0 > acc.0 {
+                    *val
+                } else {
+                    acc
+                }
+            },
+        );
 
     if max_accel_data.0 < config_values.min_accel_trigger {
-        let err_msg = format!("No deployment detected (min acc required is {:?})! max_datablock: {:?}\n",
-            config_values.min_accel_trigger,
-            max_accel_data
+        let err_msg = format!(
+            "No deployment detected (min acc required is {:?})! max_datablock: {:?}\n",
+            config_values.min_accel_trigger, max_accel_data
         );
         eprintln!("{err_msg}");
         return Err(err_msg);
@@ -84,11 +119,14 @@ pub fn parse_sensor_data(
         target_start_time = 0.0;
     };
 
-    let target_end_time   = deployment_time + config_values.time_end_offset;
+    let target_end_time = deployment_time + config_values.time_end_offset;
 
     println!(
         "max_datablock: {:?} st_time: {:?} end_time: {:?} duration: {:?}\n",
-        max_accel_data, target_start_time, target_end_time, (target_end_time - target_start_time)
+        max_accel_data,
+        target_start_time,
+        target_end_time,
+        (target_end_time - target_start_time)
     );
 
     Ok((target_start_time, target_end_time))

@@ -76,7 +76,7 @@ pub fn parse_mp4_file(src_file_path: PathBuf, config_values: ConfigValues) -> Re
         &config_values.output_file_postfix
     );
 
-    return Err(IOError::new(std::io::ErrorKind::Other, "Command disabled"));
+    // return Err(IOError::new(std::io::ErrorKind::Other, "Command disabled"));
     // promptExit!("Command disabled" );
 
     let ffmpeg_status = run_ffmpeg(
