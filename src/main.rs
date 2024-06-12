@@ -41,7 +41,7 @@ const DEP_TIME_CORRECTION: f64 = 2.0;
 const TIME_START_OFFSET  : f64 = -60.0;
 const TIME_END_OFFSET    : f64 = 3.0;
 
-const MIN_ACCEL_TRIGGER  : f64 = 35.0;
+const MIN_ACCEL_TRIGGER  : f64 = 8.0;
 
 
 configValues!(

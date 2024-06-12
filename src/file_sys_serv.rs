@@ -1,6 +1,8 @@
 use std::fs;
 use std::path::PathBuf;
 
+use gpmf_rs::SensorData;
+
 
 
 pub fn save_log_to_txt(max_accel_data_list: &Vec<(f64, f64, f64)>, file_path: &PathBuf) {
@@ -21,12 +23,12 @@ pub fn save_log_to_txt(max_accel_data_list: &Vec<(f64, f64, f64)>, file_path: &P
     }
 }
 
-pub fn save_det_log_to_txt(data_list: &Vec<(f64)>, file_path: &PathBuf) {
+pub fn save_det_log_to_txt(data_list: &Vec<f64>, file_path: &PathBuf) {
     use std::fs::File;
     use std::io::Write;
 
     let srs_file_name = file_path.file_name().unwrap().to_str().unwrap();
-    let log_file_name = format!("max_accel_{}.txt", srs_file_name);
+    let log_file_name = format!("LOG_accel_{}.txt", srs_file_name);
 
     let mut file = File::create(log_file_name).expect("Failed to create file");
 
@@ -35,6 +37,24 @@ pub fn save_det_log_to_txt(data_list: &Vec<(f64)>, file_path: &PathBuf) {
             file,
             "{:?}", data.round() as u64)
             .expect("Failed to write to file");
+    }
+}
+
+pub fn save_gsensor_data(data_list: Vec<SensorData>, file_path: &PathBuf) {
+    use std::fs::File;
+    use std::io::Write;
+
+    let srs_file_name = file_path.file_name().unwrap().to_str().unwrap();
+    let log_file_name = format!("GSENSOR_DATAl_{}.txt", srs_file_name);
+
+    let mut file = File::create(log_file_name).expect("Failed to create file");
+
+    for data in data_list.iter() {
+        writeln!(
+            file,
+            "{:?}", data.to_owned()
+        )
+        .expect("Failed to write to file");
     }
 }
 
