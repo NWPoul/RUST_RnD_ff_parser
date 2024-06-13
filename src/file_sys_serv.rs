@@ -5,7 +5,7 @@ use gpmf_rs::SensorData;
 
 
 
-pub fn save_log_to_txt(max_accel_data_list: &Vec<(f64, f64, f64)>, file_path: &PathBuf) {
+pub fn save_log_to_txt(max_accel_data_list: &Vec<(f64, f64, f64, f64)>, file_path: &PathBuf) {
     use std::fs::File;
     use std::io::Write;
 
@@ -15,11 +15,16 @@ pub fn save_log_to_txt(max_accel_data_list: &Vec<(f64, f64, f64)>, file_path: &P
     let mut file = File::create(log_file_name).expect("Failed to create file");
 
     for data in max_accel_data_list.iter() {
-        let (sec, acc_data_max, acc_data_skv) = data;
+        let (sec, acc_data_max, acc_data_skv, acc_data_v_avg) = data;
         writeln!(
             file,
-            "{:?}\t{:?}\t{:?}", sec.trunc() as u64, acc_data_max.round() as u64, acc_data_skv.round() as u64)
-            .expect("Failed to write to file");
+            "{:?}\t{:?}\t{:?}\t{:?}",
+            sec.trunc() as u64,
+            acc_data_max.round() as u64,
+            acc_data_skv.round() as u64,
+            acc_data_v_avg.round() as u64
+        )
+        .expect("Failed to write to file");
     }
 }
 

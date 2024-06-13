@@ -28,7 +28,7 @@ use cli_clonfig::get_cli_merged_config;
 
 use file_sys_serv::get_output_filename;
 
-use ffmpeg_serv::run_ffmpeg;
+// use ffmpeg_serv::run_ffmpeg;
 
 
 
@@ -61,7 +61,7 @@ pub fn parse_mp4_file(src_file_path: PathBuf, config_values: ConfigValues) -> Re
 
     gpmf_serv::get_device_info(&gpmf);
 
-    let target_start_end_time = match gpmf_serv::parse_sensor_data(&gpmf, &config_values, &src_file_path) {
+    let _target_start_end_time = match gpmf_serv::parse_sensor_data(&gpmf, &config_values, &src_file_path) {
         Ok(value) => value,
         Err(err_msg) => {
             println!("target_start_end_time ERR");
@@ -70,22 +70,22 @@ pub fn parse_mp4_file(src_file_path: PathBuf, config_values: ConfigValues) -> Re
         )},
     };
 
-    let output_file_path = get_output_filename(
+    let _output_file_path = get_output_filename(
         &src_file_path,
         &config_values.dest_dir_path,
         &config_values.output_file_postfix
     );
 
-    // return Err(IOError::new(std::io::ErrorKind::Other, "Command disabled"));
+    return Err(IOError::new(std::io::ErrorKind::Other, "Command disabled"));
     // promptExit!("Command disabled" );
 
-    let ffmpeg_status = run_ffmpeg(
-        target_start_end_time,
-        (&src_file_path, &output_file_path ),
-        &config_values.ffmpeg_dir_path,
-    );
+    // let ffmpeg_status = run_ffmpeg(
+    //     _target_start_end_time,
+    //     (&src_file_path, &_output_file_path ),
+    //     &config_values.ffmpeg_dir_path,
+    // );
 
-    ffmpeg_status
+    // ffmpeg_status
 }
 
 

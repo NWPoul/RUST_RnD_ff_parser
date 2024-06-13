@@ -8,8 +8,15 @@ use gpmf_rs::{
 
 use std::path::PathBuf;
 
-// use crate::utils;
+use crate::utils;
 use crate::ConfigValues;
+
+
+
+
+
+
+
 
 
 
@@ -22,37 +29,68 @@ fn avg_xyz(data: &SensorData) -> (f64, f64) {
     )
 }
 
-// fn max_xyz(data: &SensorData) -> (f64, f64) {
-//     let (x, y, z) = data.fields.iter().fold((0., 0., 0.), |acc, f| {
-//         (
-//             utils::abs_max(acc.0, f.x),
-//             utils::abs_max(acc.1, f.y),
-//             utils::abs_max(acc.2, f.z)
-//         )
-//     });
-//     (
-//         x.max(y).max(z),
-//         data.timestamp.unwrap_or_default().as_seconds_f64().trunc()
-//     )
-// }
+fn v_sum(v1: (f64, f64, f64), v2: (f64, f64, f64)) -> (f64, f64, f64) {
+    (
+        v1.0 + v2.0,
+        v1.1 + v2.1,
+        v1.2 + v2.2,
+    )
+}
 
-// fn max_skv_xyz(data: &SensorData) -> (f64, f64) {
-//     let total_squared_magnitude = data.fields.iter().fold(0., |acc, f| {
-//         let cur_skv = (f.x.powi(2) + f.y.powi(2) + f.z.powi(2)).sqrt();
-//         if cur_skv > acc {cur_skv} else {acc}
-//     });
-//     (
-//         total_squared_magnitude,
-//         data.timestamp.unwrap_or_default().as_seconds_f64().trunc(),
-//     )
-// }
+fn v_avg(v1: (f64, f64, f64), v2: (f64, f64, f64)) -> (f64, f64, f64) {
+    (
+        (v1.0 + v2.0) / 2.0,
+        (v1.1 + v2.1) / 2.0,
+        (v1.2 + v2.2) / 2.0,
+    )
+}
 
-// fn vec_skv_xyz(data: &SensorData) -> Vec<f64> {
-//     data.fields
-//         .iter()
-//         .map(|f| (f.x.powi(2) + f.y.powi(2) + f.z.powi(2)).sqrt())
-//         .collect()
-// }
+fn agr_v_avg(data: &SensorData) -> (f64, f64) {
+    let (x, y, z) = data.fields.iter().fold(
+        (0., 0., 0.),
+        |prev, cur| {
+            v_sum(prev, (cur.x, cur.y, cur.z))
+        }
+    );
+    (
+        (x.powi(2) + y.powi(2) + z.powi(2)).sqrt(),
+        data.timestamp.unwrap_or_default().as_seconds_f64().trunc(),
+    )
+}
+
+
+
+fn max_xyz(data: &SensorData) -> (f64, f64) {
+    let (x, y, z) = data.fields.iter().fold((0., 0., 0.), |acc, f| {
+        (
+            utils::abs_max(acc.0, f.x),
+            utils::abs_max(acc.1, f.y),
+            utils::abs_max(acc.2, f.z)
+        )
+    });
+    (
+        x.max(y).max(z),
+        data.timestamp.unwrap_or_default().as_seconds_f64().trunc()
+    )
+}
+
+fn max_skv_xyz(data: &SensorData) -> (f64, f64) {
+    let total_squared_magnitude = data.fields.iter().fold(0., |acc, f| {
+        let cur_skv = (f.x.powi(2) + f.y.powi(2) + f.z.powi(2)).sqrt();
+        if cur_skv > acc {cur_skv} else {acc}
+    });
+    (
+        total_squared_magnitude,
+        data.timestamp.unwrap_or_default().as_seconds_f64().trunc(),
+    )
+}
+
+fn vec_skv_xyz(data: &SensorData) -> Vec<f64> {
+    data.fields
+        .iter()
+        .map(|f| (f.x.powi(2) + f.y.powi(2) + f.z.powi(2)).sqrt())
+        .collect()
+}
 
 
 
@@ -75,24 +113,29 @@ pub fn get_device_info(gpmf: &Gpmf) {
 pub fn parse_sensor_data(
     gpmf: &Gpmf,
     config_values: &ConfigValues,
-    _src_file_path: &PathBuf,
+    src_file_path: &PathBuf,
 ) -> Result<(f64, f64), String> {
     let accel_data_list = gpmf.sensor(&SensorType::Accelerometer);
 
     let avg_accel_data_list = accel_data_list
-    .iter()
-    .map(|data| avg_xyz(data))
-    .collect::<Vec<_>>();
+        .iter()
+        .map(|data| avg_xyz(data))
+        .collect::<Vec<_>>();
+
+    let v_agr_accel_data_list = accel_data_list
+        .iter()
+        .map(|data| agr_v_avg(data))
+        .collect::<Vec<_>>();
 
     // let max_accel_data_list = accel_data_list
     //     .iter()
     //     .map(|data| max_xyz(data))
     //     .collect::<Vec<_>>();
 
-    // let max_log_acc_data_list = accel_data_list
-    //     .iter()
-    //     .map(|data| (max_xyz(data).1, max_xyz(data).0, max_skv_xyz(data).0))
-    //     .collect::<Vec<_>>();
+    let max_log_acc_data_list = accel_data_list
+        .iter()
+        .map(|data| (max_xyz(data).1, max_xyz(data).0, max_skv_xyz(data).0, agr_v_avg(data).0/200.0))
+        .collect::<Vec<_>>();
 
 
     // let max_det_log_acc_data_list = accel_data_list
@@ -100,7 +143,8 @@ pub fn parse_sensor_data(
     //     .flat_map(|data| vec_skv_xyz(data))
     //     .collect::<Vec<_>>();
 
-    // crate::file_sys_serv::save_log_to_txt(&max_log_acc_data_list, src_file_path);
+    crate::file_sys_serv::save_log_to_txt(&max_log_acc_data_list, src_file_path);
+    // crate::file_sys_serv::save_log_to_txt(&v_agr_accel_data_list, src_file_path);
     // crate::file_sys_serv::save_det_log_to_txt(&max_det_log_acc_data_list, src_file_path);
 
 
@@ -125,6 +169,9 @@ pub fn parse_sensor_data(
         eprintln!("{err_msg}");
         return Err(err_msg);
     }
+
+
+
 
     let deployment_time = max_avg_accel_data.1 + config_values.dep_time_correction;
 
