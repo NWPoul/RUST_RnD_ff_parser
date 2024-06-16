@@ -390,6 +390,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78834c15cb5d5efe3452d58b1e8ba890dd62d21907f867f383358198e56ebca5"
 
 [[package]]
+name = "byteorder"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
+
+[[package]]
 name = "cc"
 version = "1.0.99"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -758,6 +764,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "gnuplot"
+version = "0.0.43"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ce70b22788c02857a6436b96744f9030dd89e17c8482ddf674523c0a1f8ab6c"
+dependencies = [
+ "byteorder",
+ "tempfile",
+]
+
+[[package]]
 name = "gpmf-rs"
 version = "0.3.1"
 dependencies = [
@@ -777,6 +793,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "config",
+ "gnuplot",
  "gpmf-rs",
  "rfd",
  "serde 1.0.203",

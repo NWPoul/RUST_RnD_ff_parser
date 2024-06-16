@@ -28,7 +28,7 @@ pub fn save_log_to_txt(max_accel_data_list: &Vec<(f64, f64, f64, f64)>, file_pat
     }
 }
 
-pub fn save_det_log_to_txt(data_list: &Vec<f64>, file_path: &PathBuf) {
+pub fn save_det_log_to_txt(data_list: &Vec<(f64,f64,f64)>, file_path: &PathBuf) {
     use std::fs::File;
     use std::io::Write;
 
@@ -40,7 +40,7 @@ pub fn save_det_log_to_txt(data_list: &Vec<f64>, file_path: &PathBuf) {
     for data in data_list.iter() {
         writeln!(
             file,
-            "{:?}", data.round() as u64)
+            "{:?}\t{:?}\t{:?}\t", data.0, data.1, data.2)
             .expect("Failed to write to file");
     }
 }

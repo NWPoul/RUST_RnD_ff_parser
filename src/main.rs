@@ -28,6 +28,8 @@ use cli_clonfig::get_cli_merged_config;
 
 use file_sys_serv::get_output_filename;
 
+pub mod analise;
+
 // use ffmpeg_serv::run_ffmpeg;
 
 

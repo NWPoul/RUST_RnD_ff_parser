@@ -18,7 +18,10 @@ use crate::ConfigValues;
 
 
 
-
+fn xyz_to_vec_tuple(data: &SensorData) -> Vec<(f64, f64, f64)> {
+    let t_xyz: Vec<(f64, f64, f64)> = data.fields.iter().map(|f| (f.x,f.y,f.z)).collect();
+    t_xyz
+}
 
 
 fn avg_xyz(data: &SensorData) -> (f64, f64) {
@@ -138,14 +141,17 @@ pub fn parse_sensor_data(
         .collect::<Vec<_>>();
 
 
-    // let max_det_log_acc_data_list = accel_data_list
-    //     .iter()
-    //     .flat_map(|data| vec_skv_xyz(data))
-    //     .collect::<Vec<_>>();
+    let max_det_log_acc_data_list = accel_data_list
+        .iter()
+        .flat_map(|data| xyz_to_vec_tuple(data))
+        // .flat_map(|data| vec_skv_xyz(data))
+        .collect::<Vec<_>>();
 
     crate::file_sys_serv::save_log_to_txt(&max_log_acc_data_list, src_file_path);
     // crate::file_sys_serv::save_log_to_txt(&v_agr_accel_data_list, src_file_path);
-    // crate::file_sys_serv::save_det_log_to_txt(&max_det_log_acc_data_list, src_file_path);
+    crate::file_sys_serv::save_det_log_to_txt(&max_det_log_acc_data_list, src_file_path);
+
+    crate::analise::gnu_plot_test(&max_det_log_acc_data_list);
 
 
 
