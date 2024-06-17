@@ -25,7 +25,6 @@ pub mod ffmpeg_serv;
 mod cli_clonfig;
 use cli_clonfig::get_cli_merged_config;
 
-
 use file_sys_serv::get_output_filename;
 
 use ffmpeg_serv::run_ffmpeg;
@@ -34,14 +33,13 @@ use ffmpeg_serv::run_ffmpeg;
 
 
 
-const DEF_DIR    : &str        = ".";
-const DEF_POSTFIX: &str        = "_FFCUT";
-// const DEF_PROMPT_FLIGHT: bool  = false;
-const DEP_TIME_CORRECTION: f64 = 2.0;
-const TIME_START_OFFSET  : f64 = -60.0;
-const TIME_END_OFFSET    : f64 = 3.0;
+const DEF_DIR            : &str = ".";
+const DEF_POSTFIX        : &str = "_FFCUT";
+const DEP_TIME_CORRECTION:  f64 = 2.0;
+const TIME_START_OFFSET  :  f64 = -60.0;
+const TIME_END_OFFSET    :  f64 = 3.0;
 
-const MIN_ACCEL_TRIGGER  : f64 = 8.0;
+const MIN_ACCEL_TRIGGER  :  f64 = 5.0;
 
 
 configValues!(
@@ -113,21 +111,26 @@ fn print_parsing_results(parsing_result: Vec<Result<Child, IOError>>) {
 }
 
 
+fn get_src_files_path_list(config_values: &ConfigValues) -> Option<Vec<PathBuf>> {
+    let src_files_path_list = FileDialog::new()
+        .add_filter("mp4", &["mp4", "MP4"])
+        .set_directory(&config_values.srs_dir_path)
+        .pick_files();
+    src_files_path_list
+}
+
 
 
 fn main() {
     let mut config_values = get_config_values();
     config_values = get_cli_merged_config(config_values);
 
-    let src_files_path_list = match FileDialog::new()
-        .add_filter("mp4", &["mp4", "MP4"])
-        .set_directory(&config_values.srs_dir_path)
-        .pick_files() {
-            Some(file_path_list) => file_path_list,
-            None => {
-                promptExit!("NO MP4 FILES CHOSEN!");
-            }
-        };
+    let src_files_path_list = match get_src_files_path_list(&config_values) {
+        Some(file_path_list) => file_path_list,
+        None => {
+            promptExit!("NO MP4 FILES CHOSEN!");
+        }
+    };
 
     let parsing_result = parse_mp4_files(src_files_path_list, config_values.clone());
 
