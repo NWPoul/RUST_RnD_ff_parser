@@ -58,7 +58,8 @@ pub fn run_ffmpeg(
 
     let ffmpeg_status = Command::new("cmd")
         .args(&[
-            "/c start cmd /k",
+            "/k",
+            "start",
             &ffmpeg_path.to_string_lossy(),
         ])
         .stdin(Stdio::inherit())

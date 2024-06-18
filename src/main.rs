@@ -22,8 +22,8 @@ pub mod file_sys_serv;
 pub mod gpmf_serv;
 pub mod ffmpeg_serv;
 
-mod cli_clonfig;
-use cli_clonfig::get_cli_merged_config;
+mod cli_config;
+use cli_config::get_cli_merged_config;
 
 
 use file_sys_serv::get_output_filename;
