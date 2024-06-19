@@ -104,7 +104,7 @@ fn print_parsing_results(parsing_result: Vec<Result<Child, IOError>>) {
     println!("\nPARSING RESULTS:");
     for res in parsing_result {
         match res {
-            Ok(content) => println!("OK: {content:?}"),
+            Ok(content) => println!("OK: {:?}", content.stdout),
             Err(error)  => println!("ERR: {error}")
         }
     }
@@ -127,9 +127,7 @@ fn main() {
 
     let src_files_path_list = match get_src_files_path_list(&config_values) {
         Some(file_path_list) => file_path_list,
-        None => {
-            promptExit!("NO MP4 FILES CHOSEN!");
-        }
+        None => {promptExit!("NO MP4 FILES CHOSEN!");}
     };
 
     let parsing_result = parse_mp4_files(src_files_path_list, config_values.clone());

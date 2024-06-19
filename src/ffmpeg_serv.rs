@@ -56,12 +56,9 @@ pub fn run_ffmpeg(
 
     let ffmpeg_path = check_get_ffmpeg(ffmpeg_dir_path)?;
 
-    let ffmpeg_status = Command::new("cmd")
-        .args(&[
-            "/k",
-            "start",
-            &ffmpeg_path.to_string_lossy(),
-        ])
+    // let ffmpeg_status = Command::new("cmd")
+    let ffmpeg_status = Command::new(&ffmpeg_path)
+        
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
@@ -74,7 +71,7 @@ pub fn run_ffmpeg(
         .arg("-c")
         .arg("copy")
         .arg(output_file_path)
-        .arg("-y")
+        .arg("-n")
         .spawn();
 
     ffmpeg_status
