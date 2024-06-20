@@ -79,15 +79,6 @@ pub fn parse_mp4_file(src_file_path: PathBuf, config_values: ConfigValues) -> Re
     );
 
     return Err(IOError::new(std::io::ErrorKind::Other, "Command disabled"));
-    // promptExit!("Command disabled" );
-
-    // let ffmpeg_status = run_ffmpeg(
-    //     _target_start_end_time,
-    //     (&src_file_path, &_output_file_path ),
-    //     &config_values.ffmpeg_dir_path,
-    // );
-
-    // ffmpeg_status
 }
 
 
