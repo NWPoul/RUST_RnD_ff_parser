@@ -1,8 +1,23 @@
 use std::fs;
 use std::path::PathBuf;
+use rfd::FileDialog;
+
 
 use gpmf_rs::SensorData;
 
+
+pub fn extract_filename(path: PathBuf) -> String {
+    path
+       .file_name()
+       .and_then(|name| name.to_str())
+       .map(String::from)
+       .unwrap_or_else(|| String::from("<unknown>"))
+}
+
+
+pub fn convert_to_absolute(dest_dir: &str) -> Result<PathBuf, std::io::Error> {
+    fs::canonicalize(PathBuf::from(dest_dir))
+}
 
 
 pub fn save_log_to_txt(max_accel_data_list: &Vec<(f64, f64, f64)>, file_path: &PathBuf) {
@@ -78,6 +93,15 @@ pub fn get_src_file_path(srs_dir_path: &str) -> Option<PathBuf> {
     } else {
         None
     }
+}
+
+
+pub fn get_src_files_path_list(srs_dir_path: &str) -> Option<Vec<PathBuf>> {
+    let src_files_path_list = FileDialog::new()
+        .add_filter("mp4_files", &["mp4", "MP4"])
+        .set_directory(srs_dir_path)
+        .pick_files();
+    src_files_path_list
 }
 
 

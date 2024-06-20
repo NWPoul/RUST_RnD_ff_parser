@@ -1,6 +1,12 @@
 
-use std::process::{Command, Stdio};
-use std::path::PathBuf;
+use std::{
+    process::{Command, Stdio, Child},
+    path::PathBuf,
+    io::{
+        Error     as IOError,
+        ErrorKind as IOErrorKind,
+    }
+};
 
 
 
@@ -8,7 +14,7 @@ pub const GLITCH_MARGIN: f64 = 3.0;
 
 
 
-fn check_get_ffmpeg(ffmpeg_dir_path: &str) -> Result<PathBuf, std::io::Error> {
+fn check_get_ffmpeg(ffmpeg_dir_path: &str) -> Result<PathBuf, IOError> {
     let ffmpeg_path = PathBuf::from(ffmpeg_dir_path).join("ffmpeg.exe");
     if ffmpeg_path.exists() {
         return Ok(ffmpeg_path);
@@ -27,8 +33,8 @@ fn check_get_ffmpeg(ffmpeg_dir_path: &str) -> Result<PathBuf, std::io::Error> {
         },
         Err(_) => {
             println!("FAIL ffmpeg not in the system PATH");
-            let error = std::io::Error::new(
-                std::io::ErrorKind::NotFound,
+            let error = IOError::new(
+                IOErrorKind::NotFound,
                 "ffmpeg not found!"
             );
             return Err(error);
@@ -42,9 +48,10 @@ pub fn run_ffmpeg(
     target_start_end_time: (f64, f64),
     files_path           : (&PathBuf, &PathBuf),
     ffmpeg_dir_path      : &str,
-) -> Result<std::process::Child, std::io::Error> {
+) -> Result<Child, IOError> {
     let (mut start_time, end_time) = target_start_end_time;
     let (src_file_path, output_file_path) = files_path;
+
 
     let glitch_margin:f64 = if start_time >= GLITCH_MARGIN {
         GLITCH_MARGIN
@@ -54,11 +61,17 @@ pub fn run_ffmpeg(
 
     start_time -= glitch_margin;
 
-    let ffmpeg_path = check_get_ffmpeg(ffmpeg_dir_path)?;
+    let ffmpeg_path = check_get_ffmpeg(ffmpeg_dir_path)?
+        .display().to_string();
 
-    // let ffmpeg_status = Command::new("cmd")
-    let ffmpeg_status = Command::new(&ffmpeg_path)
-        
+
+    let ffmpeg_status = Command::new("cmd")
+        .args(&[
+            "/k",
+            "start",
+            &ffmpeg_path,
+            "/k",
+        ])
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
