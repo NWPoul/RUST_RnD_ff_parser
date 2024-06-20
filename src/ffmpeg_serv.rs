@@ -1,10 +1,15 @@
 
 use std::{
-    process::{Command, Stdio, Output},
-    path::PathBuf,
     io::{
         Error     as IOError,
         ErrorKind as IOErrorKind,
+    },
+    path::PathBuf,
+    process::{
+        Command,
+        Stdio,
+        // ChildStdout,
+        // Output,
     }
 };
 
@@ -48,7 +53,7 @@ pub fn run_ffmpeg(
     target_start_end_time: (f64, f64),
     files_path           : (&PathBuf, &PathBuf),
     ffmpeg_dir_path      : &str,
-) -> Result<Output, IOError> {
+) -> Result<String, IOError> {
     let (mut start_time, end_time) = target_start_end_time;
     let (src_file_path, output_file_path) = files_path;
 
@@ -65,10 +70,10 @@ pub fn run_ffmpeg(
         .display().to_string();
 
 
-    let ffmpeg_status = Command::new(&ffmpeg_path)
+    let mut ffmpeg_status = Command::new(&ffmpeg_path)
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::inherit())
 
         .arg("-hide_banner")
         .arg("-ss").arg(start_time.to_string())
@@ -79,7 +84,11 @@ pub fn run_ffmpeg(
         .arg("copy")
         .arg(output_file_path)
         .arg("-n")
-        .output();
+        .spawn()?;
 
-    ffmpeg_status
+
+    match ffmpeg_status.wait() {
+        Ok(child)  => Ok(child.to_string()),
+        Err(error) => Err(error)
+    }
 }
