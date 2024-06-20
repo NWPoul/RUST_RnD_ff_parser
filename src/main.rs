@@ -5,8 +5,9 @@ pub mod utils {
     pub mod u_serv;
     pub use u_serv::abs_max;
 }
-
+// use std::io::{self, Read};
 use std::path::PathBuf;
+// use std::sync::mpsc::{channel, Sender};
 
 use config::{Config, File as Cfg_file};
 use gpmf_rs::Gpmf;
@@ -29,8 +30,8 @@ use gpmf_serv::GPMFParsedData;
 
 
 // type FileParsingResult  = Vec<(String, Result<GPMFParsedData, String>)>;
-type FileParsingOkData  = Vec<(String, GPMFParsedData)>;
-type FileParsingErrData = Vec<(String, String)>;
+type FileParsingOkData  = Vec<(PathBuf, GPMFParsedData)>;
+type FileParsingErrData = Vec<(PathBuf, String)>;
 
 
 
@@ -64,11 +65,13 @@ configValues!(
 );
 
 
+
+
+
 pub fn parse_mp4_file(src_file_path: &PathBuf, config_values: ConfigValues) -> Result<GPMFParsedData, String> {
     let gpmf = Gpmf::new(&src_file_path, false)
         .map_err( |e| format!("GPMF FAILED: {:?}", e) )?;
 
-    // let device_name
 
     let gpmf_data = match gpmf_serv::parse_sensor_data(&gpmf, &config_values, &src_file_path) {
         Ok(data)     => data,
@@ -83,19 +86,23 @@ pub fn parse_mp4_file(src_file_path: &PathBuf, config_values: ConfigValues) -> R
         &config_values.output_file_postfix
     );
 
-    // return Err(IOError::new(ErrorKind::Other, "Command disabled"));
-    // promptExit!("Command disabled" );
 
-    let ffmpeg_status = run_ffmpeg(
+    let ffmpeg_output = run_ffmpeg(
         (gpmf_data.start_time, gpmf_data.end_time),
         (&src_file_path, &output_file_path ),
         &config_values.ffmpeg_dir_path,
     );
-    // println!("FFMPEG STATUS: {:?}", ffmpeg_status);
 
-    match ffmpeg_status {
-        Ok(_data) => Ok(gpmf_data),
-        Err(err)  => Err(err.to_string()),
+
+    match ffmpeg_output {
+        Ok(_output) => {
+            println!("\nFFMPEG OK:");// {:?}", _output.stderr);
+            Ok(gpmf_data)
+        },
+        Err(err)  => {
+            println!("\nFFMPEG ERR: {:?}", err.to_string());
+            Err(err.to_string())
+        }
     }
 }
 
@@ -109,18 +116,17 @@ pub fn parse_mp4_files(
 
     for src_file_path in src_files_path_list {
         let parsing_res = parse_mp4_file(&src_file_path, config_values.clone());
-        let result      = (extract_filename(src_file_path), parsing_res);
+        let result      = (src_file_path, parsing_res);
         match result {
-            (filename, Ok(data))     => ok_list.push((filename, data)),
-            (filename, Err(err_msg)) => err_list.push((filename, err_msg)),
+            (src_file_path, Ok(data))     => ok_list.push((src_file_path, data)),
+            (src_file_path, Err(err_msg)) => err_list.push((src_file_path, err_msg)),
         }
     };
     (ok_list, err_list)
 }
 
 
-fn print_parsing_results(parsing_results: (FileParsingOkData, FileParsingErrData), dest_dir: &str) {
-
+fn print_parsing_results(parsing_results: &(FileParsingOkData, FileParsingErrData), dest_dir: &str) {
     let dest_dir_string = convert_to_absolute(dest_dir)
         .unwrap_or("".into())
         .to_string_lossy()
@@ -130,15 +136,42 @@ fn print_parsing_results(parsing_results: (FileParsingOkData, FileParsingErrData
 
     println!("\n{BOLD}{GREEN}OK: => {}{RESET}", dest_dir_string);
     for res in &parsing_results.0 {
-        println!("{GREEN}{:?}{RESET} {:?}", res.0, res.1.get_description());
+        println!( "{GREEN}{:?}{RESET} {:?}",
+            extract_filename(&res.0),
+            res.1.get_description()
+        );
     }
 
     println!("\n{RED}{BOLD}FAILED:{RESET}");
     for res in &parsing_results.1 {
-        println!("{RED}{:?}{RESET} {:?}", res.0, res.1);
+        println!("{RED}{:?}{RESET} {:?}",
+            extract_filename(&res.0),
+            res.1
+        );
     }
 }
 
+
+fn copy_invalid_files(err_results: &FileParsingErrData, config_values: &ConfigValues) {
+    let should_copy = if err_results.len() > 0 {
+        println!("Can't parse {} files. Copy them as is? (Y/n)", err_results.len());
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).expect("Failed to read input");
+        input.trim().is_empty() || input.trim().to_lowercase() == "y"
+    } else { false };
+
+    if !should_copy  { return }
+
+    for (src_file_path, _) in err_results {
+        let dest_file_path = get_output_filename(
+            &src_file_path,
+            &config_values.dest_dir_path,
+            "_NA"
+        );
+        let copy_res = std::fs::copy(&src_file_path, &dest_file_path).expect("Failed to copy file");
+        println!("copy status: {:?}", copy_res);
+    };
+}
 
 
 
@@ -151,9 +184,11 @@ fn main() {
         None            => { promptExit!("NO MP4 FILES CHOSEN!"); }
     };
 
-    let parsing_result = parse_mp4_files(src_files_path_list, config_values.clone());
+    let parsing_results = parse_mp4_files(src_files_path_list, config_values.clone());
 
-    print_parsing_results(parsing_result, &config_values.dest_dir_path);
+    print_parsing_results(&parsing_results, &config_values.dest_dir_path);
+
+    copy_invalid_files(&parsing_results.1, &config_values);
 
     promptExit!("\nEND");
 }

@@ -6,7 +6,7 @@ use rfd::FileDialog;
 use gpmf_rs::SensorData;
 
 
-pub fn extract_filename(path: PathBuf) -> String {
+pub fn extract_filename(path: &PathBuf) -> String {
     path
        .file_name()
        .and_then(|name| name.to_str())
