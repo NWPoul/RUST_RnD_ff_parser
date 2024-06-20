@@ -1,10 +1,24 @@
-pub fn prompt_to_exit(msg: &str) {
-    println!("{}\nPress 'enter' to exit...\n", {msg});
+
+
+pub fn prompt_to(sys_msg: &str, msg: &str) -> bool {
+    println!("{msg}\n{sys_msg}\n");
     let mut input = String::new();
     std::io::stdin()
         .read_line(&mut input)
         .expect("Failed to read line");
+    input.trim().is_empty()
 }
+
+pub fn prompt_to_exit(msg: &str) {
+    let sys_msg = "Press 'enter' to exit...";
+    prompt_to(sys_msg, msg);
+}
+
+pub fn prompt_to_continue(msg: &str) -> bool {
+    let sys_msg = "Press 'enter' to continue...";
+    prompt_to(sys_msg, msg)
+}
+
 
 
 pub fn abs_max(f_prev: f64, f_new: f64) -> f64 {

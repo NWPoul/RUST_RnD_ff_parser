@@ -179,17 +179,24 @@ fn main() {
     let mut config_values = get_config_values();
     config_values = get_cli_merged_config(config_values);
 
-    let src_files_path_list = match get_src_files_path_list(&config_values.srs_dir_path) {
-        Some(path_list) => path_list,
-        None            => { promptExit!("NO MP4 FILES CHOSEN!"); }
-    };
+    let mut should_continue = true;
+    while should_continue {
+        let src_files_path_list = match get_src_files_path_list(&config_values.srs_dir_path) {
+            Some(path_list) => path_list,
+            None            => {
+                should_continue = utils::u_serv::prompt_to_continue("NO MP4 FILES CHOSEN!");
+                continue;
+            }
+        };
 
-    let parsing_results = parse_mp4_files(src_files_path_list, config_values.clone());
+        let parsing_results = parse_mp4_files(src_files_path_list, config_values.clone());
 
-    print_parsing_results(&parsing_results, &config_values.dest_dir_path);
+        print_parsing_results(&parsing_results, &config_values.dest_dir_path);
 
-    copy_invalid_files(&parsing_results.1, &config_values);
+        copy_invalid_files(&parsing_results.1, &config_values);
 
+        should_continue = utils::u_serv::prompt_to_continue("");
+    }
     promptExit!("\nEND");
 }
 

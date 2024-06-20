@@ -67,6 +67,14 @@ macro_rules! promptExit {
         return;
     };
 }
+
+#[macro_export]
+macro_rules! promptContinue {
+    ($msg: expr) => {
+        let confirm = crate::utils::u_serv::prompt_to_continue($msg);
+        if confirm {continue} else {return};
+    };
+}
 // macro_rules! promptExit_Ok {
 //     ($msg: expr) => {
 //         crate::utils::u_serv::prompt_to_exit($msg);
