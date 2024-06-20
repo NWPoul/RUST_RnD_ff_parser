@@ -21,7 +21,11 @@ mod cli_config;
 use cli_config::get_cli_merged_config;
 
 use file_sys_serv::{
-    convert_to_absolute, extract_filename, get_output_filename, get_src_files_path_list
+    convert_to_absolute,
+    extract_filename,
+    get_output_filename,
+    get_src_files_path_list,
+    watch_drivers,
 };
 
 use ffmpeg_serv::run_ffmpeg;
@@ -181,6 +185,9 @@ fn main() {
 
     let mut should_continue = true;
     while should_continue {
+
+        watch_drivers();
+
         let src_files_path_list = match get_src_files_path_list(&config_values.srs_dir_path) {
             Some(path_list) => path_list,
             None            => {
@@ -199,4 +206,6 @@ fn main() {
     }
     promptExit!("\nEND");
 }
+
+
 

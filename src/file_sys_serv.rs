@@ -1,6 +1,12 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{
+    Path,
+    PathBuf,
+};
+use std::sync::mpsc::{Sender, Receiver};
+use std::collections::HashSet;
 use rfd::FileDialog;
+use std::time::Duration;
 
 
 use gpmf_rs::SensorData;
@@ -132,4 +138,81 @@ pub fn get_output_filename(
     // }
 
     output_file_path
+}
+
+
+pub fn get_current_drives() -> HashSet<String> {
+    let mut drives = HashSet::new();
+
+    for letter in 'A'..='Z' {
+        let drive_path = format!("{}:\\", letter);
+        if Path::new(&drive_path).exists() {
+            drives.insert(drive_path);
+        }
+    }
+
+    drives
+}
+
+
+
+fn watch_drives_loop(rx: std::sync::mpsc::Receiver<()>) {
+    let mut known_drives = get_current_drives();
+    println!("Initial Drives: {:?}", known_drives);
+
+    loop {
+        let current_drives = get_current_drives();
+
+        for drive in &current_drives {
+            if!known_drives.contains(drive) {
+                println!("New drive detected: {}", drive);
+                match fs::read_dir(drive) {
+                    Ok(entries) => {
+                        for entry in entries {
+                            if let Ok(entry) = entry {
+                                println!("Found entry: {:?}", entry.path());
+                            }
+                        }
+                    }
+                    Err(e) => println!("Error reading drive {}: {}", drive, e),
+                }
+            }
+        }
+
+        for drive in &known_drives {
+            if!current_drives.contains(drive) {
+                println!("Drive removed: {}", drive);
+            }
+        }
+
+        known_drives = current_drives;
+
+        std::thread::sleep(Duration::from_secs(1));
+
+        if rx.try_recv().is_ok() {
+            break;
+        }
+    }
+}
+
+
+
+
+pub fn watch_drivers() {
+    let (tx, rx):(Sender<()>, Receiver<()>) = std::sync::mpsc::channel();
+
+    let tx_clone = tx.clone();
+
+    let handle1 = std::thread::spawn(move || {
+        watch_drives_loop(rx);
+    });
+
+    let handle2 = std::thread::spawn(move || {
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).expect("Failed to read from stdin");
+        tx_clone.send(()).unwrap();
+    });
+
+    handle1.join().unwrap();
+    handle2.join().unwrap();
 }
