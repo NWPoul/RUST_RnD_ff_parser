@@ -173,8 +173,14 @@ fn copy_invalid_files(err_results: &FileParsingErrData, config_values: &ConfigVa
             &config_values.dest_dir_path,
             "_NA"
         );
-        let copy_res = std::fs::copy(&src_file_path, &dest_file_path).expect("Failed to copy file");
-        println!("copy status: {:?}", copy_res);
+        let copy_res = std::fs::copy(&src_file_path, &dest_file_path);
+        match copy_res {
+            Ok(number) => {println!("copy succsess: {:?} to {:?} ({:?})", src_file_path, dest_file_path, number);},
+            Err(err) => {
+                println!("Failed to copy {:?} to {:?}", src_file_path, dest_file_path);
+                println!("Error: {:?}", err.to_string());
+            }
+        }
     };
 }
 

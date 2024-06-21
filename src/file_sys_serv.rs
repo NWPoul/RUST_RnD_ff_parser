@@ -203,7 +203,6 @@ fn watch_drives_loop(rx: Receiver<()>) -> Option<PathBuf> {
         if rx.try_recv().is_ok() {
             break;
         }
-
     }
     cur_dir
 }
@@ -236,11 +235,4 @@ pub fn watch_drivers() -> Option<PathBuf> {
     let dir_path = handle_whatch_drivers_loop.join().unwrap();
     println!("END whatch_drivers_loop {:?}", dir_path);
     return dir_path;
-
-    // _ = handle_whatch_input_loop.join();
-    // handle_whatch_input_loop.join().expect("Failed to join watch_input_loop thread");
-    // println!("END whatch_input_loop");
-    
-
-    // dir_path
 }
