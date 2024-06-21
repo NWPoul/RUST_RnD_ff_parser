@@ -39,10 +39,11 @@ type FileParsingErrData = Vec<(PathBuf, String)>;
 
 
 
-const GREEN: &str = "\x1B[32m";
-const RED  : &str = "\x1B[31m";
-const BOLD : &str = "\x1B[1m";
-const RESET: &str = "\x1B[0m";
+pub const GREEN: &str = "\x1B[32m";
+pub const RED: &str = "\x1B[31m";
+pub const YELLOW: &str = "\x1B[33m";
+pub const BOLD: &str = "\x1B[1m";
+pub const RESET: &str = "\x1B[0m";
 
 
 const DEF_DIR            : &str = ".";
@@ -186,9 +187,11 @@ fn main() {
     let mut should_continue = true;
     while should_continue {
 
-        watch_drivers();
+        let whatched_dir = watch_drivers();
+        println!("main::whatched_dir: {:?}", whatched_dir);
+        let src_dir = whatched_dir.unwrap_or((&config_values.srs_dir_path).into());
 
-        let src_files_path_list = match get_src_files_path_list(&config_values.srs_dir_path) {
+        let src_files_path_list = match get_src_files_path_list(&src_dir.to_string_lossy()) {
             Some(path_list) => path_list,
             None            => {
                 should_continue = utils::u_serv::prompt_to_continue("NO MP4 FILES CHOSEN!");
@@ -198,11 +201,11 @@ fn main() {
 
         let parsing_results = parse_mp4_files(src_files_path_list, config_values.clone());
 
-        print_parsing_results(&parsing_results, &config_values.dest_dir_path);
+        print_parsing_results(&parsing_results, &src_dir.to_string_lossy());
 
         copy_invalid_files(&parsing_results.1, &config_values);
 
-        should_continue = utils::u_serv::prompt_to_continue("");
+        should_continue = true//utils::u_serv::prompt_to_continue("");
     }
     promptExit!("\nEND");
 }

@@ -3,13 +3,16 @@ use std::path::{
     Path,
     PathBuf,
 };
-use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc::{channel, Sender, Receiver};
 use std::collections::HashSet;
 use rfd::FileDialog;
 use std::time::Duration;
 
 
 use gpmf_rs::SensorData;
+
+
+use crate::{GREEN,  BOLD, RESET};
 
 
 pub fn extract_filename(path: &PathBuf) -> String {
@@ -156,25 +159,33 @@ pub fn get_current_drives() -> HashSet<String> {
 
 
 
-fn watch_drives_loop(rx: std::sync::mpsc::Receiver<()>) {
+fn watch_drives_loop(rx: Receiver<()>) -> Option<PathBuf> {
     let mut known_drives = get_current_drives();
-    println!("Initial Drives: {:?}", known_drives);
+    println!("\nInitial Drives: {:?}", known_drives);
+    println!("{BOLD}{GREEN}WHATCHING FOR NEW DRIVE / CARD, PRESS ENTER TO OPEN FILE DIALOG:{RESET}");
 
-    loop {
+    let cur_dir = None;
+    loop { //'drivers_loop: 
         let current_drives = get_current_drives();
 
         for drive in &current_drives {
             if!known_drives.contains(drive) {
-                println!("New drive detected: {}", drive);
+                println!("{BOLD}{GREEN}New drive detected: {}{RESET}", drive);
                 match fs::read_dir(drive) {
                     Ok(entries) => {
                         for entry in entries {
                             if let Ok(entry) = entry {
-                                println!("Found entry: {:?}", entry.path());
+                                if entry.path().ends_with("DCIM") {
+                                    return Some(entry.path());
+                                }
                             }
                         }
+                        return Some(drive.into());
                     }
-                    Err(e) => println!("Error reading drive {}: {}", drive, e),
+                    Err(e) => {
+                        println!("Error reading drive {}: {}", drive, e);
+                        return  None;
+                    },
                 }
             }
         }
@@ -192,27 +203,44 @@ fn watch_drives_loop(rx: std::sync::mpsc::Receiver<()>) {
         if rx.try_recv().is_ok() {
             break;
         }
+
     }
+    cur_dir
 }
 
 
 
 
-pub fn watch_drivers() {
-    let (tx, rx):(Sender<()>, Receiver<()>) = std::sync::mpsc::channel();
-
+pub fn watch_drivers() -> Option<PathBuf> {
+    let (tx, rx):(Sender<()>, Receiver<()>) = channel();
     let tx_clone = tx.clone();
 
-    let handle1 = std::thread::spawn(move || {
-        watch_drives_loop(rx);
+    let handle_whatch_drivers_loop = std::thread::spawn(move || {
+        watch_drives_loop(rx)
     });
 
-    let handle2 = std::thread::spawn(move || {
+    let _handle_whatch_input_loop = std::thread::spawn(move || {
         let mut input = String::new();
         std::io::stdin().read_line(&mut input).expect("Failed to read from stdin");
-        tx_clone.send(()).unwrap();
+        match tx_clone.send(()) {
+            Ok(_) => {},
+            Err(e) => {
+                println!("Failed to send message to watch_drivers_loop: {}\n ", e);
+                println!("{BOLD}{GREEN}Press 'Enter' to continue...{RESET}");
+                ()
+            },
+        };
     });
+    
 
-    handle1.join().unwrap();
-    handle2.join().unwrap();
+    let dir_path = handle_whatch_drivers_loop.join().unwrap();
+    println!("END whatch_drivers_loop {:?}", dir_path);
+    return dir_path;
+
+    // _ = handle_whatch_input_loop.join();
+    // handle_whatch_input_loop.join().expect("Failed to join watch_input_loop thread");
+    // println!("END whatch_input_loop");
+    
+
+    // dir_path
 }

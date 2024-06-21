@@ -1,7 +1,8 @@
 
+use crate::{BOLD, YELLOW, RESET};
 
 pub fn prompt_to(sys_msg: &str, msg: &str) -> bool {
-    println!("{msg}\n{sys_msg}\n");
+    println!("{BOLD}{YELLOW}{msg}\n{sys_msg}{RESET}\n");
     let mut input = String::new();
     std::io::stdin()
         .read_line(&mut input)
