@@ -101,14 +101,6 @@ pub fn parse_sensor_data(
         max_acc_data: max_avg_accel_data,
     };
 
-    // println!(
-    //     "max_datablock: {:?} st_time: {:?} end_time: {:?} duration: {:?}\n",
-    //     format_acc_datablock(&max_avg_accel_data),
-    //     target_start_time,
-    //     target_end_time,
-    //     (target_end_time - target_start_time)
-    // );
-
     Ok(parsed_data)
 }
 

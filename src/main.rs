@@ -132,10 +132,8 @@ pub fn parse_mp4_files(
 
 
 fn print_parsing_results(parsing_results: &(FileParsingOkData, FileParsingErrData), dest_dir: &str) {
-    let dest_dir_string = convert_to_absolute(dest_dir)
-        .unwrap_or("".into())
-        .to_string_lossy()
-        .replace("\\\\?\\", "");
+    let output_file_path = get_output_filename(&"".into(), dest_dir,"" );
+    let dest_dir_string = output_file_path.parent().unwrap().to_str().unwrap();
 
     println!("\n\n{BOLD}PARSING RESULTS:{RESET}");
 
@@ -192,7 +190,6 @@ fn main() {
 
     let mut should_continue = true;
     while should_continue {
-
         let whatched_dir = watch_drivers();
         println!("main::whatched_dir: {:?}", whatched_dir);
         let src_dir = whatched_dir.unwrap_or((&config_values.srs_dir_path).into());

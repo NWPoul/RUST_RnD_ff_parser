@@ -15,6 +15,14 @@ use gpmf_rs::SensorData;
 use crate::{GREEN,  BOLD, RESET};
 
 
+
+pub fn check_path(path_str: &str) -> bool {
+    let path = PathBuf::from(path_str);
+    path.exists()
+}
+
+
+
 pub fn extract_filename(path: &PathBuf) -> String {
     path
        .file_name()
@@ -159,10 +167,23 @@ pub fn get_current_drives() -> HashSet<String> {
 
 
 
+pub fn get_src_path_for_drive(drivepath_str: &str) -> PathBuf {
+    let dcim_path  = format!("{}\\DCIM", drivepath_str);
+    let gopro_path = format!("{}\\100GOPRO", dcim_path);
+        // println!("gopro_path: {gopro_path}");
+        if check_path(&gopro_path) {
+            return gopro_path.into();
+        }
+        if check_path(&dcim_path) {
+            return dcim_path.into();
+        }
+        drivepath_str.into()
+}
+
 fn watch_drives_loop(rx: Receiver<()>) -> Option<PathBuf> {
     let mut known_drives = get_current_drives();
     println!("\nInitial Drives: {:?}", known_drives);
-    println!("{BOLD}{GREEN}WHATCHING FOR NEW DRIVE / CARD, PRESS ENTER TO OPEN FILE DIALOG:{RESET}");
+    println!("{BOLD}{GREEN}WHATCHING FOR NEW DRIVE / CARD...\n(press 'ENTER' if want to open file dialog){RESET}");
 
     let cur_dir = None;
     loop { //'drivers_loop: 
@@ -172,15 +193,8 @@ fn watch_drives_loop(rx: Receiver<()>) -> Option<PathBuf> {
             if!known_drives.contains(drive) {
                 println!("{BOLD}{GREEN}New drive detected: {}{RESET}", drive);
                 match fs::read_dir(drive) {
-                    Ok(entries) => {
-                        for entry in entries {
-                            if let Ok(entry) = entry {
-                                if entry.path().ends_with("DCIM") {
-                                    return Some(entry.path());
-                                }
-                            }
-                        }
-                        return Some(drive.into());
+                    Ok(_entries) => {
+                        return Some(get_src_path_for_drive(drive));
                     }
                     Err(e) => {
                         println!("Error reading drive {}: {}", drive, e);
