@@ -40,7 +40,7 @@ fn v_sum(v1: (f64, f64, f64), v2: (f64, f64, f64)) -> (f64, f64, f64) {
     )
 }
 
-fn v_avg(v1: (f64, f64, f64), v2: (f64, f64, f64)) -> (f64, f64, f64) {
+fn _v_avg(v1: (f64, f64, f64), v2: (f64, f64, f64)) -> (f64, f64, f64) {
     (
         (v1.0 + v2.0) / 2.0,
         (v1.1 + v2.1) / 2.0,
@@ -88,7 +88,7 @@ fn max_skv_xyz(data: &SensorData) -> (f64, f64) {
     )
 }
 
-fn vec_skv_xyz(data: &SensorData) -> Vec<f64> {
+fn _vec_skv_xyz(data: &SensorData) -> Vec<f64> {
     data.fields
         .iter()
         .map(|f| (f.x.powi(2) + f.y.powi(2) + f.z.powi(2)).sqrt())
@@ -141,17 +141,16 @@ pub fn parse_sensor_data(
         .collect::<Vec<_>>();
 
 
-    let max_det_log_acc_data_list = accel_data_list
+    let det_log_acc_vec_list = accel_data_list
         .iter()
         .flat_map(|data| xyz_to_vec_tuple(data))
-        // .flat_map(|data| vec_skv_xyz(data))
         .collect::<Vec<_>>();
 
     crate::file_sys_serv::save_log_to_txt(&max_log_acc_data_list, src_file_path);
     // crate::file_sys_serv::save_log_to_txt(&v_agr_accel_data_list, src_file_path);
-    crate::file_sys_serv::save_det_log_to_txt(&max_det_log_acc_data_list, src_file_path);
+    crate::file_sys_serv::save_det_log_to_txt(&det_log_acc_vec_list, src_file_path);
 
-    crate::analise::gnu_plot_test(&max_det_log_acc_data_list);
+    crate::analise::gnu_plot_test(&det_log_acc_vec_list);
 
 
 
@@ -189,7 +188,7 @@ pub fn parse_sensor_data(
     let target_end_time = deployment_time + config_values.time_end_offset;
 
     println!(
-        "max_datablock: {:?} st_time: {:?} end_time: {:?} duration: {:?}\n",
+        "\nmax_datablock: {:?} st_time: {:?} end_time: {:?} duration: {:?}\n",
         max_avg_accel_data,
         target_start_time,
         target_end_time,

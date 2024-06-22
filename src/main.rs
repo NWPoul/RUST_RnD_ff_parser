@@ -58,7 +58,7 @@ configValues!(
 );
 
 
-pub fn parse_mp4_file(src_file_path: PathBuf, config_values: ConfigValues) -> Result<Child, IOError> {
+pub fn parse_mp4_file(src_file_path: PathBuf, config_values: ConfigValues) -> Result<(f64, f64), IOError> {
     let gpmf = Gpmf::new(&src_file_path, false)?;
 
     gpmf_serv::get_device_info(&gpmf);
@@ -72,21 +72,15 @@ pub fn parse_mp4_file(src_file_path: PathBuf, config_values: ConfigValues) -> Re
         )},
     };
 
-    let _output_file_path = get_output_filename(
-        &src_file_path,
-        &config_values.dest_dir_path,
-        &config_values.output_file_postfix
-    );
-
-    return Err(IOError::new(std::io::ErrorKind::Other, "Command disabled"));
+    return Ok(_target_start_end_time);
 }
 
 
 pub fn parse_mp4_files(
     src_files_path_list: Vec<PathBuf>,
     config_values      : ConfigValues
-) -> Vec<Result<Child, IOError>> {
-    let mut result_list:Vec<Result<Child, IOError>> = vec![];
+) -> Vec<Result<(f64, f64), IOError>> {
+    let mut result_list:Vec<Result<(f64, f64), IOError>> = vec![];
 
     for src_file_path in src_files_path_list {
         let file_res = parse_mp4_file(src_file_path, config_values.clone());
@@ -95,7 +89,7 @@ pub fn parse_mp4_files(
     result_list
 }
 
-fn print_parsing_results(parsing_result: Vec<Result<Child, IOError>>) {
+fn print_parsing_results(parsing_result: Vec<Result<(f64, f64), IOError>>) {
     println!("\nPARSING RESULTS:");
     for res in parsing_result {
         match res {
