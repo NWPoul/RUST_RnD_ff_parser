@@ -101,8 +101,9 @@ pub fn get_max_vec_data(data: (Vec<f64>, Vec<f64>)) -> (f64, f64) {
             |prev, next| prev.1.partial_cmp(next.1).unwrap_or(std::cmp::Ordering::Greater)
         )
         .unwrap_or((0,&0.));
-    (max_t as f64 * 0.005, *max_vec)
+    ((max_t as f64 * 0.005).round(), *max_vec)
 }
+
 
 
 

@@ -7,6 +7,7 @@ pub mod utils {
 }
 // use std::io::{self, Read};
 use std::path::PathBuf;
+use std::sync::mpsc::{channel, Sender, Receiver};
 // use std::sync::mpsc::{channel, Sender};
 
 use config::{Config, File as Cfg_file};
@@ -135,16 +136,15 @@ fn print_parsing_results(
     parsing_results: &(FileParsingOkData, FileParsingErrData),
     dest_dir: &str,
 ) {
+    let def_path = PathBuf::from(".");
     let output_file_path = get_output_filename(&PathBuf::from(""), dest_dir, "");
     let dest_dir_string = output_file_path
         .parent()
-        .unwrap()
-        .to_str()
-        .unwrap();
+        .unwrap_or(&def_path);
 
     println!("\n\n{BOLD}PARSING RESULTS:{RESET}");
 
-    println!("\n{BOLD}{GREEN}OK: => {}{RESET}", dest_dir_string);
+    println!("\n{BOLD}{GREEN}OK: => {}{RESET}", &dest_dir_string.to_string_lossy());
     for res in &parsing_results.0 {
         println!(
             "{GREEN}{:?}{RESET} {:?}",
@@ -153,9 +153,11 @@ fn print_parsing_results(
         );
     }
 
-    println!("\n{RED}{BOLD}FAILED:{RESET}");
-    for res in &parsing_results.1 {
-        println!("{RED}{:?}{RESET} {:?}", extract_filename(&res.0), res.1);
+    if parsing_results.1.len() > 0 {
+        println!("\n{RED}{BOLD}FAILED:{RESET}");
+        for res in &parsing_results.1 {
+            println!("{RED}{:?}{RESET} {:?}", extract_filename(&res.0), res.1);
+        }
     }
 }
 
@@ -192,16 +194,19 @@ fn copy_invalid_files(err_results: &FileParsingErrData, config_values: &ConfigVa
 fn main() {
     let mut config_values = get_config_values();
     config_values = get_cli_merged_config(config_values);
+    let (tx, rx): (Sender<()>, Receiver<()>) = channel();
+    let rx_shared = std::sync::Arc::new(std::sync::Mutex::new(rx));
 
     let mut should_continue = true;
     while should_continue {
-        let whatched_dir = watch_drivers();
+        // let rx_clone = rx_shared.lock().unwrap().clone();
+        let whatched_dir = watch_drivers(tx.clone(), &rx_shared);
         println!("main::whatched_dir: {:?}", whatched_dir);
         let src_dir = whatched_dir.unwrap_or((&config_values.srs_dir_path).into());
 
         let src_files_path_list = match get_src_files_path_list(&src_dir.to_string_lossy()) {
             Some(path_list) => path_list,
-            None            => {
+            None => {
                 should_continue = utils::u_serv::prompt_to_continue("NO MP4 FILES CHOSEN!");
                 continue;
             }
@@ -213,7 +218,7 @@ fn main() {
 
         copy_invalid_files(&parsing_results.1, &config_values);
 
-        should_continue = true//utils::u_serv::prompt_to_continue("");
+        should_continue = true //utils::u_serv::prompt_to_continue("");
     }
     promptExit!("\nEND");
 }

@@ -5,6 +5,7 @@ use std::path::{
 };
 use std::sync::mpsc::{channel, Sender, Receiver};
 use std::collections::HashSet;
+use std::sync::Mutex;
 use rfd::FileDialog;
 use std::time::Duration;
 
@@ -127,6 +128,7 @@ pub fn get_output_filename(
     dest_dir_path      : &str,
     output_file_postfix: &str
 ) -> PathBuf {
+    let def_path = PathBuf::from(".");
     let mut dest_dir_path = PathBuf::from(dest_dir_path);
     if !dest_dir_path.exists() {
         println!("dest_dir_path : {:?} don't exist\n", dest_dir_path);
@@ -134,7 +136,7 @@ pub fn get_output_filename(
     }
     let output_file_name = format!(
         "{}{}.mp4",
-        src_file_path.file_stem().unwrap().to_str().unwrap(),
+        src_file_path.file_stem().unwrap_or(&def_path.into_os_string()).to_str().unwrap(),
         output_file_postfix
     );
 
@@ -180,7 +182,7 @@ pub fn get_src_path_for_drive(drivepath_str: &str) -> PathBuf {
         drivepath_str.into()
 }
 
-fn watch_drives_loop(rx: Receiver<()>) -> Option<PathBuf> {
+fn watch_drives_loop(rx: &Mutex<std::sync::mpsc::Receiver<()>>) -> Option<PathBuf> {
     let mut known_drives = get_current_drives();
     println!("\nInitial Drives: {:?}", known_drives);
     println!("{BOLD}{GREEN}WHATCHING FOR NEW DRIVE / CARD...\n(press 'ENTER' if want to open file dialog){RESET}");
@@ -214,7 +216,9 @@ fn watch_drives_loop(rx: Receiver<()>) -> Option<PathBuf> {
 
         std::thread::sleep(Duration::from_secs(1));
 
-        if rx.try_recv().is_ok() {
+        
+        let rx_lock = rx.lock().unwrap();
+        if rx_lock.try_recv().is_ok() {
             break;
         }
     }
@@ -224,29 +228,27 @@ fn watch_drives_loop(rx: Receiver<()>) -> Option<PathBuf> {
 
 
 
-pub fn watch_drivers() -> Option<PathBuf> {
-    let (tx, rx):(Sender<()>, Receiver<()>) = channel();
+pub fn watch_drivers(tx: Sender<()>, rx: Mutex<std::sync::mpsc::Receiver<()>>) -> Option<PathBuf> {
     let tx_clone = tx.clone();
 
-    let handle_whatch_drivers_loop = std::thread::spawn(move || {
-        watch_drives_loop(rx)
-    });
+    let handle_whatch_drivers_loop = std::thread::spawn(move || watch_drives_loop(&rx));
 
     let _handle_whatch_input_loop = std::thread::spawn(move || {
         let mut input = String::new();
-        std::io::stdin().read_line(&mut input).expect("Failed to read from stdin");
+        std::io::stdin()
+            .read_line(&mut input)
+            .expect("Failed to read from stdin");
         match tx_clone.send(()) {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => {
                 println!("Failed to send message to watch_drivers_loop: {}\n ", e);
                 println!("{BOLD}{GREEN}Press 'Enter' to continue...{RESET}");
                 ()
-            },
+            }
         };
     });
-    
 
     let dir_path = handle_whatch_drivers_loop.join().unwrap();
     println!("END whatch_drivers_loop {:?}", dir_path);
-    return dir_path;
+    dir_path
 }
