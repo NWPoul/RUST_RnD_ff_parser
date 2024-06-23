@@ -21,7 +21,7 @@ mod cli_config;
 use cli_config::get_cli_merged_config;
 
 use file_sys_serv::{
-    convert_to_absolute,
+    // convert_to_absolute,
     extract_filename,
     get_output_filename,
     get_src_files_path_list,
@@ -52,7 +52,7 @@ const DEP_TIME_CORRECTION:  f64 = 2.0;
 const TIME_START_OFFSET  :  f64 = -60.0;
 const TIME_END_OFFSET    :  f64 = 3.0;
 
-const MIN_ACCEL_TRIGGER  :  f64 = 5.0;
+const MIN_ACCEL_TRIGGER  :  f64 = 20.0;
 
 
 
@@ -131,15 +131,23 @@ pub fn parse_mp4_files(
 }
 
 
-fn print_parsing_results(parsing_results: &(FileParsingOkData, FileParsingErrData), dest_dir: &str) {
-    let output_file_path = get_output_filename(&"".into(), dest_dir,"" );
-    let dest_dir_string = output_file_path.parent().unwrap().to_str().unwrap();
+fn print_parsing_results(
+    parsing_results: &(FileParsingOkData, FileParsingErrData),
+    dest_dir: &str,
+) {
+    let output_file_path = get_output_filename(&PathBuf::from(""), dest_dir, "");
+    let dest_dir_string = output_file_path
+        .parent()
+        .unwrap()
+        .to_str()
+        .unwrap();
 
     println!("\n\n{BOLD}PARSING RESULTS:{RESET}");
 
     println!("\n{BOLD}{GREEN}OK: => {}{RESET}", dest_dir_string);
     for res in &parsing_results.0 {
-        println!( "{GREEN}{:?}{RESET} {:?}",
+        println!(
+            "{GREEN}{:?}{RESET} {:?}",
             extract_filename(&res.0),
             res.1.get_description()
         );
@@ -147,10 +155,7 @@ fn print_parsing_results(parsing_results: &(FileParsingOkData, FileParsingErrDat
 
     println!("\n{RED}{BOLD}FAILED:{RESET}");
     for res in &parsing_results.1 {
-        println!("{RED}{:?}{RESET} {:?}",
-            extract_filename(&res.0),
-            res.1
-        );
+        println!("{RED}{:?}{RESET} {:?}", extract_filename(&res.0), res.1);
     }
 }
 
