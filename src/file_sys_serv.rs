@@ -1,10 +1,5 @@
 use std::{
-    fs,
-    fs::File,
-    io::Write,
-    path::{Path, PathBuf},
-    collections::HashSet,
-    time::Duration,
+    collections::HashSet, fs::{self, File}, io::{Read, Write}, path::{Path, PathBuf}, time::Duration
 };
 
 use rfd::FileDialog;
@@ -147,14 +142,12 @@ pub fn get_output_filename(
 
 pub fn get_current_drives() -> HashSet<String> {
     let mut drives = HashSet::new();
-
     for letter in 'A'..='Z' {
         let drive_path = format!("{}:\\", letter);
         if Path::new(&drive_path).exists() {
             drives.insert(drive_path);
         }
     }
-
     drives
 }
 
@@ -206,7 +199,6 @@ fn watch_drives_loop(rx: Receiver<()>) -> Option<PathBuf> {
         known_drives = current_drives;
 
         std::thread::sleep(Duration::from_secs(1));
-
         
         if rx.try_recv().is_ok() {
             break;
@@ -239,4 +231,31 @@ pub fn watch_drivers(tx: Sender<()>, rx: Receiver<()>) -> Option<PathBuf> {
     let dir_path = handle_whatch_drivers_loop.join().unwrap();
     println!("END whatch_drivers_loop {:?}", dir_path);
     dir_path
+}
+
+
+
+pub fn copy_with_progress(src_file_path: &str, dest_file_path: &str) -> std::io::Result<()> {
+    let mut src_file = File::open(src_file_path)?;
+    let mut dest_file = File::create(dest_file_path)?;
+
+    let mut buffer = vec![0; 10_485_760]; // Buffer to hold data during reading and writing
+    let mut total_bytes_read = 0;
+    let mut total_bytes_to_copy = std::fs::metadata(src_file_path)?.len();
+    let mut bytes_copied = 0;
+
+    loop {
+        let n = src_file.read(&mut buffer)?;
+        if n == 0 {
+            break;
+        }
+        total_bytes_read += n;
+        bytes_copied += n;
+        let progress = (bytes_copied as f64 / total_bytes_to_copy as f64) * 100.0;
+        println!("Copying progress: {}%", progress);
+
+        dest_file.write_all(&buffer[..n])?;
+    }
+
+    Ok(())
 }

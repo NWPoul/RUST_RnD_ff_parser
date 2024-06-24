@@ -23,10 +23,7 @@ use cli_config::get_cli_merged_config;
 
 use file_sys_serv::{
     // convert_to_absolute,
-    extract_filename,
-    get_output_filename,
-    get_src_files_path_list,
-    watch_drivers,
+    copy_with_progress, extract_filename, get_output_filename, get_src_files_path_list, watch_drivers
 };
 
 use ffmpeg_serv::run_ffmpeg;
@@ -164,29 +161,40 @@ fn print_parsing_results(
 
 fn copy_invalid_files(err_results: &FileParsingErrData, config_values: &ConfigValues) {
     let should_copy = if err_results.len() > 0 {
-        println!("Can't parse {} files. Copy them as is? (Y/n)", err_results.len());
+        println!(
+            "Can't parse {} files. Copy them as is? (Y/n)",
+            err_results.len()
+        );
         let mut input = String::new();
-        std::io::stdin().read_line(&mut input).expect("Failed to read input");
+        std::io::stdin()
+            .read_line(&mut input)
+            .expect("Failed to read input");
         input.trim().is_empty() || input.trim().to_lowercase() == "y"
-    } else { false };
+    } else {
+        false
+    };
 
-    if !should_copy  { return }
+    if !should_copy {
+        return;
+    }
 
     for (src_file_path, _) in err_results {
-        let dest_file_path = get_output_filename(
-            &src_file_path,
-            &config_values.dest_dir_path,
-            "_NA"
-        );
-        let copy_res = std::fs::copy(&src_file_path, &dest_file_path);
+        let dest_file_path =
+            get_output_filename(src_file_path, &config_values.dest_dir_path, "_NA");
+        let copy_res = copy_with_progress(src_file_path.to_str().unwrap(), &dest_file_path.to_str().unwrap());
         match copy_res {
-            Ok(number) => {println!("copy succsess: {:?} to {:?} ({:?})", src_file_path, dest_file_path, number);},
+            Ok(number) => {
+                println!(
+                    "copy succsess: {:?} to {:?} ({:?})",
+                    src_file_path, dest_file_path, number
+                );
+            }
             Err(err) => {
                 println!("Failed to copy {:?} to {:?}", src_file_path, dest_file_path);
                 println!("Error: {:?}", err.to_string());
             }
         }
-    };
+    }
 }
 
 
