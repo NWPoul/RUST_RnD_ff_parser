@@ -1,14 +1,14 @@
-use std::fs;
-use std::path::{
-    Path,
-    PathBuf,
+use std::{
+    fs,
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+    collections::HashSet,
+    time::Duration,
 };
-use std::sync::mpsc::{channel, Sender, Receiver};
-use std::collections::HashSet;
-use std::sync::Mutex;
-use rfd::FileDialog;
-use std::time::Duration;
 
+use rfd::FileDialog;
+use crossbeam_channel::{ Sender, Receiver};
 
 use gpmf_rs::SensorData;
 
@@ -39,9 +39,6 @@ pub fn convert_to_absolute(dest_dir: &str) -> Result<PathBuf, std::io::Error> {
 
 
 pub fn save_log_to_txt(max_accel_data_list: &Vec<(f64, f64, f64)>, file_path: &PathBuf) {
-    use std::fs::File;
-    use std::io::Write;
-
     let srs_file_name = file_path.file_name().unwrap().to_str().unwrap();
     let log_file_name = format!("max_accel_{}.txt", srs_file_name);
 
@@ -57,9 +54,6 @@ pub fn save_log_to_txt(max_accel_data_list: &Vec<(f64, f64, f64)>, file_path: &P
 }
 
 pub fn save_det_log_to_txt(data_list: &Vec<f64>, file_path: &PathBuf) {
-    use std::fs::File;
-    use std::io::Write;
-
     let srs_file_name = file_path.file_name().unwrap().to_str().unwrap();
     let log_file_name = format!("LOG_accel_{}.txt", srs_file_name);
 
@@ -74,9 +68,6 @@ pub fn save_det_log_to_txt(data_list: &Vec<f64>, file_path: &PathBuf) {
 }
 
 pub fn save_gsensor_data(data_list: Vec<SensorData>, file_path: &PathBuf) {
-    use std::fs::File;
-    use std::io::Write;
-
     let srs_file_name = file_path.file_name().unwrap().to_str().unwrap();
     let log_file_name = format!("GSENSOR_DATAl_{}.txt", srs_file_name);
 
@@ -182,7 +173,7 @@ pub fn get_src_path_for_drive(drivepath_str: &str) -> PathBuf {
         drivepath_str.into()
 }
 
-fn watch_drives_loop(rx: &Mutex<std::sync::mpsc::Receiver<()>>) -> Option<PathBuf> {
+fn watch_drives_loop(rx: Receiver<()>) -> Option<PathBuf> {
     let mut known_drives = get_current_drives();
     println!("\nInitial Drives: {:?}", known_drives);
     println!("{BOLD}{GREEN}WHATCHING FOR NEW DRIVE / CARD...\n(press 'ENTER' if want to open file dialog){RESET}");
@@ -217,8 +208,7 @@ fn watch_drives_loop(rx: &Mutex<std::sync::mpsc::Receiver<()>>) -> Option<PathBu
         std::thread::sleep(Duration::from_secs(1));
 
         
-        let rx_lock = rx.lock().unwrap();
-        if rx_lock.try_recv().is_ok() {
+        if rx.try_recv().is_ok() {
             break;
         }
     }
@@ -228,17 +218,15 @@ fn watch_drives_loop(rx: &Mutex<std::sync::mpsc::Receiver<()>>) -> Option<PathBu
 
 
 
-pub fn watch_drivers(tx: Sender<()>, rx: Mutex<std::sync::mpsc::Receiver<()>>) -> Option<PathBuf> {
-    let tx_clone = tx.clone();
-
-    let handle_whatch_drivers_loop = std::thread::spawn(move || watch_drives_loop(&rx));
+pub fn watch_drivers(tx: Sender<()>, rx: Receiver<()>) -> Option<PathBuf> {
+    let handle_whatch_drivers_loop = std::thread::spawn(move || watch_drives_loop(rx));
 
     let _handle_whatch_input_loop = std::thread::spawn(move || {
         let mut input = String::new();
         std::io::stdin()
             .read_line(&mut input)
             .expect("Failed to read from stdin");
-        match tx_clone.send(()) {
+        match tx.send(()) {
             Ok(_) => {}
             Err(e) => {
                 println!("Failed to send message to watch_drivers_loop: {}\n ", e);

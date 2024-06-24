@@ -7,7 +7,7 @@ pub mod utils {
 }
 // use std::io::{self, Read};
 use std::path::PathBuf;
-use std::sync::mpsc::{channel, Sender, Receiver};
+use crossbeam_channel::{unbounded, Sender, Receiver};
 // use std::sync::mpsc::{channel, Sender};
 
 use config::{Config, File as Cfg_file};
@@ -194,20 +194,20 @@ fn copy_invalid_files(err_results: &FileParsingErrData, config_values: &ConfigVa
 fn main() {
     let mut config_values = get_config_values();
     config_values = get_cli_merged_config(config_values);
-    let (tx, rx): (Sender<()>, Receiver<()>) = channel();
-    let rx_shared = std::sync::Arc::new(std::sync::Mutex::new(rx));
+
+    let (tx, rx): (Sender<()>, Receiver<()>) = unbounded();
 
     let mut should_continue = true;
     while should_continue {
-        // let rx_clone = rx_shared.lock().unwrap().clone();
-        let whatched_dir = watch_drivers(tx.clone(), &rx_shared);
+        let whatched_dir = watch_drivers(tx.clone(), rx.clone());
         println!("main::whatched_dir: {:?}", whatched_dir);
         let src_dir = whatched_dir.unwrap_or((&config_values.srs_dir_path).into());
 
         let src_files_path_list = match get_src_files_path_list(&src_dir.to_string_lossy()) {
             Some(path_list) => path_list,
             None => {
-                should_continue = utils::u_serv::prompt_to_continue("NO MP4 FILES CHOSEN!");
+                println!("NO MP4 FILES CHOSEN!");
+                // should_continue = utils::u_serv::prompt_to_continue("NO MP4 FILES CHOSEN!");
                 continue;
             }
         };
