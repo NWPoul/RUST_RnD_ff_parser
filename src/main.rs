@@ -8,13 +8,12 @@ pub mod utils {
 
 use std::{
     path::PathBuf,
-    process::Child,
-    io::Error as IOError,
+    // process::Child,
+    // io::Error as IOError,
 };
 
 use rfd::FileDialog;
 use config::{Config, File as Cfg_file};
-use gpmf_rs::Gpmf;
 
 
 
@@ -28,7 +27,8 @@ mod cli_clonfig;
 use cli_clonfig::get_cli_merged_config;
 
 
-use file_sys_serv::get_output_filename;
+// use file_sys_serv::get_output_filename;
+use telemetry_parser_serv::{get_result_metadata_for_file, TelemetryResultAccData};
 
 pub mod analise;
 
@@ -60,74 +60,65 @@ configValues!(
 );
 
 
-pub fn parse_mp4_file(src_file_path: PathBuf, config_values: ConfigValues) -> Result<Child, IOError> {
-    let gpmf = Gpmf::new(&src_file_path, false)?;
-
-    gpmf_serv::get_device_info(&gpmf);
-
-    let _target_start_end_time = match gpmf_serv::parse_sensor_data(&gpmf, &config_values, &src_file_path) {
-        Ok(value) => value,
-        Err(err_msg) => {
-            println!("target_start_end_time ERR");
-            return Err(
-            IOError::new(std::io::ErrorKind::Other, err_msg)
-        )},
-    };
-
-    let _output_file_path = get_output_filename(
-        &src_file_path,
-        &config_values.dest_dir_path,
-        &config_values.output_file_postfix
-    );
-
-    return Err(IOError::new(std::io::ErrorKind::Other, "Command disabled"));
+pub fn format_acc_datablock(acc_n_time: &(f64, f64)) -> String {
+    format!("{:.2}m/s2  @ {}s", acc_n_time.0, acc_n_time.1)
 }
 
+// struct FileAnalysisResult {
+//     pub device_name : String,
+//     pub start_time  : f64,
+//     pub end_time    : f64,
+//     pub max_acc_data: (f64, f64),
+// }
+// impl FileAnalysisResult {
+//     pub fn get_description(&self) -> String {
+//         format!(
+//             "CAM: {} Freefall: {}s-{}s ({}s) Max Acc: {}",
+//             self.device_name,
+//             self.start_time,
+//             self.end_time,
+//             self.end_time - self.start_time,
+//             format_acc_datablock(&(self.max_acc_data.0, self.max_acc_data.1))
+//         )
+//     }
+// }
+
+
+// type CombineResults = Vec<(Vec<(f64, f64, f64)>, Vec<f64>)>;
 
 pub fn parse_mp4_files(
-    src_files_path_list: Vec<PathBuf>,
-    config_values      : ConfigValues
-) -> Vec<Result<Child, IOError>> {
-    let mut result_list:Vec<Result<Child, IOError>> = vec![];
-
-    for src_file_path in src_files_path_list {
-        let file_res = parse_mp4_file(src_file_path, config_values.clone());
-        result_list.push(file_res);
-    };
-    result_list
-}
-
-
-
-pub fn parse_mp4_files_new(
     src_files_path_list: &Vec<PathBuf>,
     // config_values      : ConfigValues
-) -> Vec<(Vec<(f64, f64, f64)>, Vec<f64>)> {
-    let mut result_list:Vec<(Vec<(f64, f64, f64)>, Vec<f64>)> = vec![];
+) -> Vec<Result<TelemetryResultAccData, String>> {
+    let mut result_list:Vec<Result<TelemetryResultAccData, String>> = vec![];
 
     for src_file_path in src_files_path_list {
-        let file_res = telemetry_parser_serv::parse_telemetry_from_mp4_file(&src_file_path.to_string_lossy());
+        let file_res = match get_result_metadata_for_file(&src_file_path.to_string_lossy()) {
+            Ok(res_acc_data) => Ok(res_acc_data.acc_data),
+            Err(err_str)     => Err(err_str)
+        };
         result_list.push(file_res);
     };
     result_list
 }
 
 
-fn print_parsing_results(parsing_result: Vec<Result<Child, IOError>>) {
-    println!("\nPARSING RESULTS:");
-    for res in parsing_result {
-        match res {
-            Ok(content) => println!("OK: {content:?}"),
-            Err(error)  => println!("ERR: {error}")
-        }
-    }
-}
+// fn print_parsing_results(parsing_result: Vec<Result<Child, IOError>>) {
+//     println!("\nPARSING RESULTS:");
+//     for res in parsing_result {
+//         match res {
+//             Ok(content) => println!("OK: {content:?}"),
+//             Err(error)  => println!("ERR: {error}")
+//         }
+//     }
+// }
 
-fn plot_parsed_data(parsed_data: &Vec<(Vec<(f64, f64, f64)>, Vec<f64>)>) {
-    for data in parsed_data {
-        // crate::analise::gnu_plot_xyz(&(data.0));
-        crate::analise::gnu_plot_single(&data.1);
-    }
+fn plot_parsed_data(data: &(Vec<(f64, f64, f64)>, Vec<f64>)) {
+    crate::analise::gnu_plot_single(&data.1);
+    // for data in parsed_data {
+    //     // crate::analise::gnu_plot_xyz(&(data.0));
+    //     crate::analise::gnu_plot_single(&data.1);
+    // }
 }
 
 
@@ -147,12 +138,23 @@ fn main() {
             }
         };
 
-        let new_parsing_res = parse_mp4_files_new(&src_files_path_list);
-        plot_parsed_data(&new_parsing_res);
+        let parsing_result = parse_mp4_files(&src_files_path_list);
+        for res in parsing_result {
+            match res {
+                Ok(res_data) => plot_parsed_data(
+                    &(
+                        res_data.xyz,
+                        res_data.sma,
+                    )
+                ),
+                Err(error)  => println!("ERR: {error}"),
+            }
+        }
 
-        let parsing_result = parse_mp4_files(src_files_path_list, config_values.clone());
 
-    print_parsing_results(parsing_result);
+        // let parsing_result = parse_mp4_files(src_files_path_list, config_values.clone());
+
+    // print_parsing_results(parsing_result);
 
 
 
