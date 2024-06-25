@@ -57,7 +57,6 @@ pub fn format_data_for_plot(data: &[f64]) -> (Vec<f64>, Vec<f64>) {
 
 
 
-
 pub fn gnu_plot_xyz(data: &Vec<(f64, f64, f64)>) {
     let mut t: Vec<f64> = vec![0.0];
     let mut xy: Vec<f64> = Vec::new();

@@ -6,11 +6,7 @@ pub mod utils {
     pub use u_serv::abs_max;
 }
 
-use std::{
-    path::PathBuf,
-    // process::Child,
-    // io::Error as IOError,
-};
+use std::path::PathBuf;
 
 use rfd::FileDialog;
 use config::{Config, File as Cfg_file};
@@ -31,8 +27,6 @@ use cli_clonfig::get_cli_merged_config;
 use telemetry_parser_serv::{get_result_metadata_for_file, TelemetryResultAccData};
 
 pub mod analise;
-
-// use ffmpeg_serv::run_ffmpeg;
 
 
 
@@ -84,7 +78,6 @@ pub fn format_acc_datablock(acc_n_time: &(f64, f64)) -> String {
 // }
 
 
-// type CombineResults = Vec<(Vec<(f64, f64, f64)>, Vec<f64>)>;
 
 pub fn parse_mp4_files(
     src_files_path_list: &Vec<PathBuf>,
@@ -150,14 +143,6 @@ fn main() {
                 Err(error)  => println!("ERR: {error}"),
             }
         }
-
-
-        // let parsing_result = parse_mp4_files(src_files_path_list, config_values.clone());
-
-    // print_parsing_results(parsing_result);
-
-
-
     promptExit!("\nEND");
 }
 
