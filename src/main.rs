@@ -1,235 +1,87 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright © 2021 Adrian <adrian.eddy at gmail>
 
+use std::time::Instant;
+use std::sync::{ Arc, atomic::AtomicBool };
 
-pub mod utils {
-    pub mod error;
-    pub mod u_serv;
-    pub use u_serv::abs_max;
-}
-// use std::io::{self, Read};
-use std::path::PathBuf;
-use crossbeam_channel::{unbounded, Sender, Receiver};
-// use std::sync::mpsc::{channel, Sender};
+use telemetry_parser::*;
+use telemetry_parser::tags_impl::*;
 
-use config::{Config, File as Cfg_file};
-use gpmf_rs::Gpmf;
+/** gyro2bb v0.2.8
+Author: Adrian <adrian.eddy@gmail.com>
 
-pub mod macros;
-pub mod file_sys_serv;
-pub mod gpmf_serv;
-pub mod ffmpeg_serv;
-
-mod cli_config;
-use cli_config::get_cli_merged_config;
-
-use file_sys_serv::{
-    // convert_to_absolute,
-    copy_with_progress, extract_filename, get_output_filename, get_src_files_path_list, watch_drivers
-};
-
-use ffmpeg_serv::run_ffmpeg;
-use gpmf_serv::GPMFParsedData;
-
-
-
-// type FileParsingResult  = Vec<(String, Result<GPMFParsedData, String>)>;
-type FileParsingOkData  = Vec<(PathBuf, GPMFParsedData)>;
-type FileParsingErrData = Vec<(PathBuf, String)>;
-
-
-
-pub const GREEN: &str = "\x1B[32m";
-pub const RED: &str = "\x1B[31m";
-pub const YELLOW: &str = "\x1B[33m";
-pub const BOLD: &str = "\x1B[1m";
-pub const RESET: &str = "\x1B[0m";
-
-
-const DEF_DIR            : &str = ".";
-const DEF_POSTFIX        : &str = "_FFCUT";
-const DEP_TIME_CORRECTION:  f64 = 2.0;
-const TIME_START_OFFSET  :  f64 = -60.0;
-const TIME_END_OFFSET    :  f64 = 3.0;
-
-const MIN_ACCEL_TRIGGER  :  f64 = 20.0;
-
-
-
-
-
-configValues!(
-    ( srs_dir_path       , String , DEF_DIR.to_string() ),
-    ( dest_dir_path      , String , DEF_DIR.to_string() ),
-    ( ffmpeg_dir_path    , String , DEF_DIR.to_string() ),
-    ( output_file_postfix, String , DEF_POSTFIX.to_string() ),
-    ( dep_time_correction, f64    , DEP_TIME_CORRECTION ),
-    ( time_start_offset  , f64    , TIME_START_OFFSET ),
-    ( time_end_offset    , f64    , TIME_END_OFFSET ),
-    ( min_accel_trigger  , f64    , MIN_ACCEL_TRIGGER )
-);
-
-
-
-
-
-pub fn parse_mp4_file(src_file_path: &PathBuf, config_values: ConfigValues) -> Result<GPMFParsedData, String> {
-    let gpmf = Gpmf::new(&src_file_path, false)
-        .map_err( |e| format!("GPMF FAILED: {:?}", e) )?;
-
-
-    let gpmf_data = match gpmf_serv::parse_sensor_data(&gpmf, &config_values, &src_file_path) {
-        Ok(data)     => data,
-        Err(err_msg) => {
-            return Err(err_msg)
-        },
-    };
-
-    let output_file_path = get_output_filename(
-        &src_file_path,
-        &config_values.dest_dir_path,
-        &config_values.output_file_postfix
-    );
-
-
-    let ffmpeg_output = run_ffmpeg(
-        (gpmf_data.start_time, gpmf_data.end_time),
-        (&src_file_path, &output_file_path ),
-        &config_values.ffmpeg_dir_path,
-    );
-
-
-    match ffmpeg_output {
-        Ok(_output) => {
-            println!("\nFFMPEG OK:");// {:?}", _output.stderr);
-            Ok(gpmf_data)
-        },
-        Err(err)  => {
-            println!("\nFFMPEG ERR: {:?}", err.to_string());
-            Err(err.to_string())
-        }
-    }
+Extract gyro data from Sony, GoPro and Insta360 cameras to betaflight blackbox csv log
+*/
+struct Opts {
+    input: String,
+    dump: bool,
+    imuo: Option<String>,
 }
 
-
-pub fn parse_mp4_files(
-    src_files_path_list: Vec<PathBuf>,
-    config_values      : ConfigValues
-) -> (FileParsingOkData, FileParsingErrData) {
-    let mut ok_list : FileParsingOkData  = vec![];
-    let mut err_list: FileParsingErrData = vec![];
-
-    for src_file_path in src_files_path_list {
-        let parsing_res = parse_mp4_file(&src_file_path, config_values.clone());
-        let result      = (src_file_path, parsing_res);
-        match result {
-            (src_file_path, Ok(data))     => ok_list.push((src_file_path, data)),
-            (src_file_path, Err(err_msg)) => err_list.push((src_file_path, err_msg)),
-        }
-    };
-    (ok_list, err_list)
-}
-
-
-fn print_parsing_results(
-    parsing_results: &(FileParsingOkData, FileParsingErrData),
-    dest_dir: &str,
-) {
-    let def_path = PathBuf::from(".");
-    let output_file_path = get_output_filename(&PathBuf::from(""), dest_dir, "");
-    let dest_dir_string = output_file_path
-        .parent()
-        .unwrap_or(&def_path);
-
-    println!("\n\n{BOLD}PARSING RESULTS:{RESET}");
-
-    println!("\n{BOLD}{GREEN}OK: => {}{RESET}", &dest_dir_string.to_string_lossy());
-    for res in &parsing_results.0 {
-        println!(
-            "{GREEN}{:?}{RESET} {:?}",
-            extract_filename(&res.0),
-            res.1.get_description()
-        );
-    }
-
-    if parsing_results.1.len() > 0 {
-        println!("\n{RED}{BOLD}FAILED:{RESET}");
-        for res in &parsing_results.1 {
-            println!("{RED}{:?}{RESET} {:?}", extract_filename(&res.0), res.1);
-        }
-    }
-}
-
-
-fn copy_invalid_files(err_results: &FileParsingErrData, config_values: &ConfigValues) {
-    let should_copy = if err_results.len() > 0 {
-        println!(
-            "Can't parse {} files. Copy them as is? (Y/n)",
-            err_results.len()
-        );
-        let mut input = String::new();
-        std::io::stdin()
-            .read_line(&mut input)
-            .expect("Failed to read input");
-        input.trim().is_empty() || input.trim().to_lowercase() == "y"
-    } else {
-        false
-    };
-
-    if !should_copy {
-        return;
-    }
-
-    for (src_file_path, _) in err_results {
-        let dest_file_path =
-            get_output_filename(src_file_path, &config_values.dest_dir_path, "_NA");
-        let copy_res = copy_with_progress(src_file_path.to_str().unwrap(), &dest_file_path.to_str().unwrap());
-        match copy_res {
-            Ok(number) => {
-                println!(
-                    "copy succsess: {:?} to {:?} ({:?})",
-                    src_file_path, dest_file_path, number
-                );
-            }
-            Err(err) => {
-                println!("Failed to copy {:?} to {:?}", src_file_path, dest_file_path);
-                println!("Error: {:?}", err.to_string());
-            }
-        }
-    }
-}
+const INPUT_11_MINI: &str = "D:\\DEV\\VIDEO_TEMP\\GX019575_JAY.mp4";
+const INPUT_H9:      &str = "D:\\DEV\\VIDEO_TEMP\\GX019345.mp4";
 
 
 
 fn main() {
-    let mut config_values = get_config_values();
-    config_values = get_cli_merged_config(config_values);
+    // let opts: Opts = argh::from_env();
+    let opts: Opts = Opts {
+        input: INPUT_H9.into(),
+        dump: false,
+        imuo: None,
+    };
+    let _time = Instant::now();
 
-    let (tx, rx): (Sender<()>, Receiver<()>) = unbounded();
+    let mut stream = std::fs::File::open(&opts.input).unwrap();
+    let filesize = stream.metadata().unwrap().len() as usize;
 
-    let mut should_continue = true;
-    while should_continue {
-        let whatched_dir = watch_drivers(tx.clone(), rx.clone());
-        println!("main::whatched_dir: {:?}", whatched_dir);
-        let src_dir = whatched_dir.unwrap_or((&config_values.srs_dir_path).into());
+    let input = Input::from_stream(&mut stream, filesize, &opts.input, |_|(), Arc::new(AtomicBool::new(false))).unwrap();
 
-        let src_files_path_list = match get_src_files_path_list(&src_dir.to_string_lossy()) {
-            Some(path_list) => path_list,
-            None => {
-                println!("NO MP4 FILES CHOSEN!");
-                // should_continue = utils::u_serv::prompt_to_continue("NO MP4 FILES CHOSEN!");
-                continue;
+    let mut i = 0;
+    println!("Detected camera: {} {}", input.camera_type(), input.camera_model().unwrap_or(&"".into()));
+
+    let samples = input.samples.as_ref().unwrap();
+
+    if opts.dump {
+        for info in samples {
+            if info.tag_map.is_none() { continue; }
+            let grouped_tag_map = info.tag_map.as_ref().unwrap();
+
+            for (group, map) in grouped_tag_map {
+                for (tagid, taginfo) in map {
+                    println!("{: <25} {: <25} {: <50}: {}", format!("{}", group), format!("{}", tagid), taginfo.description, &taginfo.value.to_string());
+                }
             }
-        };
-
-        let parsing_results = parse_mp4_files(src_files_path_list, config_values.clone());
-
-        print_parsing_results(&parsing_results, &src_dir.to_string_lossy());
-
-        copy_invalid_files(&parsing_results.1, &config_values);
-
-        should_continue = true //utils::u_serv::prompt_to_continue("");
+        }
     }
-    promptExit!("\nEND");
+
+    let imu_data = util::normalized_imu(&input, opts.imuo).unwrap();
+
+    let mut csv = String::with_capacity(2*1024*1024);
+    crate::try_block!({
+        let map = samples.get(0)?.tag_map.as_ref()?;
+        let json = (map.get(&GroupId::Default)?.get_t(TagId::Metadata) as Option<&serde_json::Value>)?;
+        for (k, v) in json.as_object()? {
+            csv.push('"');
+            csv.push_str(&k.to_string());
+            csv.push_str("\",");
+            csv.push_str(&v.to_string());
+            csv.push('\n');
+        }
+    });
+
+    csv.push_str(r#""N","time","accSmooth[0]","accSmooth[1]","accSmooth[2]""#);
+    csv.push('\n');
+    for v in imu_data {
+        if v.accl.is_some() {
+            let accl = v.accl.unwrap_or_default();
+            csv.push_str(&format!("{},{:.0},{},{},{}\n", i, (v.timestamp_ms).round(),
+                -accl[2], accl[1], accl[0]
+            ));
+            i += 1;
+        }
+    }
+    std::fs::write(&format!("{}.csv", std::path::Path::new(&opts.input).to_path_buf().to_string_lossy()), csv).unwrap();
+
+    println!("Done in {:.3} ms", _time.elapsed().as_micros() as f64 / 1000.0);
 }
-
-
-
