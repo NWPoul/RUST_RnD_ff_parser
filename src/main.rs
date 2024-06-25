@@ -97,6 +97,22 @@ pub fn parse_mp4_files(
     result_list
 }
 
+
+
+pub fn parse_mp4_files_new(
+    src_files_path_list: &Vec<PathBuf>,
+    // config_values      : ConfigValues
+) -> Vec<(Vec<(f64, f64, f64)>, Vec<f64>)> {
+    let mut result_list:Vec<(Vec<(f64, f64, f64)>, Vec<f64>)> = vec![];
+
+    for src_file_path in src_files_path_list {
+        let file_res = telemetry_parser_serv::parse_telemetry_from_mp4_file(&src_file_path.to_string_lossy());
+        result_list.push(file_res);
+    };
+    result_list
+}
+
+
 fn print_parsing_results(parsing_result: Vec<Result<Child, IOError>>) {
     println!("\nPARSING RESULTS:");
     for res in parsing_result {
@@ -104,6 +120,13 @@ fn print_parsing_results(parsing_result: Vec<Result<Child, IOError>>) {
             Ok(content) => println!("OK: {content:?}"),
             Err(error)  => println!("ERR: {error}")
         }
+    }
+}
+
+fn plot_parsed_data(parsed_data: &Vec<(Vec<(f64, f64, f64)>, Vec<f64>)>) {
+    for data in parsed_data {
+        // crate::analise::gnu_plot_xyz(&(data.0));
+        crate::analise::gnu_plot_single(&data.1);
     }
 }
 
@@ -124,10 +147,10 @@ fn main() {
             }
         };
 
-    let new_parsing_res = telemetry_parser_serv::parse_telemetry_from_mp4_file(&src_files_path_list[0].to_string_lossy());
-    crate::analise::gnu_plot_xyz(&new_parsing_res);
+        let new_parsing_res = parse_mp4_files_new(&src_files_path_list);
+        plot_parsed_data(&new_parsing_res);
 
-    let parsing_result = parse_mp4_files(src_files_path_list, config_values.clone());
+        let parsing_result = parse_mp4_files(src_files_path_list, config_values.clone());
 
     print_parsing_results(parsing_result);
 

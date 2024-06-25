@@ -77,7 +77,7 @@ pub fn get_sensor_data(
     gpmf: &Gpmf,
     _config_values: &ConfigValues,
     _src_file_path: &PathBuf,
-) -> (Vec<(f64, f64, f64)>, (Vec<f64>, Vec<f64>)) {
+) -> (Vec<(f64, f64, f64)>, Vec<f64>) {
     let accel_data_list = gpmf.sensor(&SensorType::Accelerometer);
 
     let plain_xyz_list = gpmf_get_plain_xyz_tubles_list(&accel_data_list);
