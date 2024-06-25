@@ -17,10 +17,12 @@ use config::{Config, File as Cfg_file};
 use gpmf_rs::Gpmf;
 
 
+
 pub mod macros;
 pub mod file_sys_serv;
+
 pub mod gpmf_serv;
-pub mod ffmpeg_serv;
+pub mod telemetry_parser_serv;
 
 mod cli_clonfig;
 use cli_clonfig::get_cli_merged_config;
@@ -122,9 +124,14 @@ fn main() {
             }
         };
 
+    let new_parsing_res = telemetry_parser_serv::parse_telemetry_from_mp4_file(&src_files_path_list[0].to_string_lossy());
+    crate::analise::gnu_plot_xyz(&new_parsing_res);
+
     let parsing_result = parse_mp4_files(src_files_path_list, config_values.clone());
 
     print_parsing_results(parsing_result);
+
+
 
     promptExit!("\nEND");
 }
