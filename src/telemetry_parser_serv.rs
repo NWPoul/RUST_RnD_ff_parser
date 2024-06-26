@@ -22,19 +22,18 @@ pub struct TelemetryData {
 
 
 
-fn _get_additional_metadata(samples: &[util::SampleInfo]) {
-    let mut csv = String::with_capacity(2*1024*1024);
+fn _get_additional_metadata(samples: &[util::SampleInfo]) -> Vec<(String, String)> {
+    let mut additional_metadata: Vec<(String,String)> = vec![];
     telemetry_parser::try_block!({
         let map = samples.get(0)?.tag_map.as_ref()?;
         let json = (map.get(&GroupId::Default)?.get_t(TagId::Metadata) as Option<&serde_json::Value>)?;
         for (k, v) in json.as_object()? {
-            csv.push('"');
-            csv.push_str(&k.to_string());
-            csv.push_str("\",");
-            csv.push_str(&v.to_string());
-            csv.push('\n');
+            additional_metadata.push(
+               ( k.to_string(), v.to_string())
+            );
         }
     });
+    additional_metadata
 }
 
 
@@ -82,13 +81,17 @@ pub fn parse_telemetry_from_file(input_file: &str) -> Result<TelemetryData, Stri
         Err(e) => {return Err(format!("FAIL TO PARSE TELEMETRY! {}", e.to_string()));},
     };
 
-    let cam_info = format!("{} {}", input.camera_type(), input.camera_model().unwrap_or(&"".into()));
+    let cam_info = format!("{} {}",
+        input.camera_type(),
+        input.camera_model().unwrap_or(&"".into()),
+    );
     println!("Detected camera: {cam_info}");
 
     let samples = match input.samples.as_ref() {
         Some(samples_ref) => samples_ref,
         None => {return Err(format!("NO_SAMPLES!"))},
     };
+
 
     if opts.dump { dump_samples(samples);}
 

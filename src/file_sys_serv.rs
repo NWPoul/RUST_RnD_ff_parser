@@ -108,6 +108,7 @@ pub fn get_output_filename(
 }
 
 
+
 pub fn get_current_drives() -> HashSet<String> {
     let mut drives = HashSet::new();
     for letter in 'A'..='Z' {
@@ -169,6 +170,8 @@ fn watch_drives_loop(rx: Receiver<()>) -> Option<PathBuf> {
     println!("\nInitial Drives: {:?}", known_drives);
     println!("{BOLD}{GREEN}WHATCHING FOR NEW DRIVE / CARD...\n(press 'ENTER' if want to open file dialog){RESET}");
 
+    //   let current_drives2 = get_current_drives2().0;
+    //   println!("current_drives2 {:?}", current_drives2);
     let cur_dir = None;
     loop { //'drivers_loop:
         let current_drives = get_current_drives();
@@ -217,7 +220,7 @@ pub fn watch_drivers(tx: Sender<()>, rx: Receiver<()>) -> Option<PathBuf> {
             .read_line(&mut input)
             .expect("Failed to read from stdin");
         match tx.send(()) {
-            Ok(_) => {}
+            Ok(_)  => {}
             Err(e) => {
                 println!("Failed to send message to watch_drivers_loop: {}\n ", e);
                 println!("{BOLD}{GREEN}Press 'Enter' to continue...{RESET}");
@@ -232,3 +235,22 @@ pub fn watch_drivers(tx: Sender<()>, rx: Receiver<()>) -> Option<PathBuf> {
 }
 
 
+
+
+
+
+
+use sysinfo::Disks;
+
+pub fn get_current_drives2() -> (Disks, Vec<String>) {
+    let mut drivers_list: Vec<String> = vec![];
+    let disks = Disks::new_with_refreshed_list();
+    for disk in disks.list() {
+        println!("{:?}: {:?}", disk.name(), disk.kind());
+        drivers_list.push(
+            format!("{:?}", disk)
+        )
+
+    }
+    (disks, drivers_list)
+}
