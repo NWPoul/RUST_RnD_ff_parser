@@ -1,11 +1,23 @@
 use std::{
-    collections::HashSet, fs::{self, File}, io::{Read, Write}, path::{Path, PathBuf}, time::Duration
+    collections::HashSet,
+    fs::{
+        self,
+        File
+    },
+    io::{
+        Read,
+        Write
+    },
+    path::{
+        Path,
+        PathBuf
+    },
+    time::Duration
 };
 
 use rfd::FileDialog;
-use crossbeam_channel::{ Sender, Receiver};
+use crossbeam_channel::{Sender, Receiver};
 
-use gpmf_rs::SensorData;
 
 
 use crate::{GREEN,  BOLD, RESET};
@@ -31,52 +43,6 @@ pub fn extract_filename(path: &PathBuf) -> String {
 pub fn convert_to_absolute(dest_dir: &str) -> Result<PathBuf, std::io::Error> {
     fs::canonicalize(PathBuf::from(dest_dir))
 }
-
-
-pub fn save_log_to_txt(max_accel_data_list: &Vec<(f64, f64, f64)>, file_path: &PathBuf) {
-    let srs_file_name = file_path.file_name().unwrap().to_str().unwrap();
-    let log_file_name = format!("max_accel_{}.txt", srs_file_name);
-
-    let mut file = File::create(log_file_name).expect("Failed to create file");
-
-    for data in max_accel_data_list.iter() {
-        let (sec, acc_data_max, acc_data_skv) = data;
-        writeln!(
-            file,
-            "{:?}\t{:?}\t{:?}", sec.trunc() as u64, acc_data_max.round() as u64, acc_data_skv.round() as u64)
-            .expect("Failed to write to file");
-    }
-}
-
-pub fn save_det_log_to_txt(data_list: &Vec<f64>, file_path: &PathBuf) {
-    let srs_file_name = file_path.file_name().unwrap().to_str().unwrap();
-    let log_file_name = format!("LOG_accel_{}.txt", srs_file_name);
-
-    let mut file = File::create(log_file_name).expect("Failed to create file");
-
-    for data in data_list.iter() {
-        writeln!(
-            file,
-            "{:?}", data.round() as u64)
-            .expect("Failed to write to file");
-    }
-}
-
-pub fn save_gsensor_data(data_list: Vec<SensorData>, file_path: &PathBuf) {
-    let srs_file_name = file_path.file_name().unwrap().to_str().unwrap();
-    let log_file_name = format!("GSENSOR_DATAl_{}.txt", srs_file_name);
-
-    let mut file = File::create(log_file_name).expect("Failed to create file");
-
-    for data in data_list.iter() {
-        writeln!(
-            file,
-            "{:?}", data.to_owned()
-        )
-        .expect("Failed to write to file");
-    }
-}
-
 
 
 pub fn get_src_file_path(srs_dir_path: &str) -> Option<PathBuf> {
@@ -112,7 +78,8 @@ pub fn get_src_files_path_list(srs_dir_path: &str) -> Option<Vec<PathBuf>> {
 pub fn get_output_filename(
     src_file_path      : &PathBuf,
     dest_dir_path      : &str,
-    output_file_postfix: &str
+    output_file_postfix: &str,
+    device_info        : &str,
 ) -> PathBuf {
     let def_path = PathBuf::from(".");
     let mut dest_dir_path = PathBuf::from(dest_dir_path);
@@ -121,7 +88,8 @@ pub fn get_output_filename(
         dest_dir_path = PathBuf::from(src_file_path.parent().unwrap())
     }
     let output_file_name = format!(
-        "{}{}.mp4",
+        "{} {}{}.mp4",
+        device_info,
         src_file_path.file_stem().unwrap_or(&def_path.into_os_string()).to_str().unwrap(),
         output_file_postfix
     );
@@ -152,7 +120,6 @@ pub fn get_current_drives() -> HashSet<String> {
 }
 
 
-
 pub fn get_src_path_for_drive(drivepath_str: &str) -> PathBuf {
     let dcim_path  = format!("{}\\DCIM", drivepath_str);
     let gopro_path = format!("{}\\100GOPRO", dcim_path);
@@ -165,6 +132,37 @@ pub fn get_src_path_for_drive(drivepath_str: &str) -> PathBuf {
         }
         drivepath_str.into()
 }
+
+
+
+
+pub fn copy_with_progress(src_file_path: &str, dest_file_path: &str) -> std::io::Result<()> {
+    let mut src_file  = File::open(src_file_path)?;
+    let mut dest_file = File::create(dest_file_path)?;
+
+    let mut buffer = vec![0; 8_388_608];
+    let total_bytes_to_copy = std::fs::metadata(src_file_path)?.len();
+    let mut bytes_copied = 0;
+
+    loop {
+        let n = src_file.read(&mut buffer)?;
+        if n == 0 {
+            break;
+        }
+        bytes_copied += n;
+        let progress = (bytes_copied as f64 / total_bytes_to_copy as f64) * 100.0;
+        std::io::stdout().flush().unwrap();
+        print!("Copying progress: {}%\r", progress.trunc());
+
+        dest_file.write_all(&buffer[..n])?;
+    }
+
+    Ok(())
+}
+
+
+
+
 
 fn watch_drives_loop(rx: Receiver<()>) -> Option<PathBuf> {
     let mut known_drives = get_current_drives();
@@ -234,27 +232,3 @@ pub fn watch_drivers(tx: Sender<()>, rx: Receiver<()>) -> Option<PathBuf> {
 }
 
 
-
-pub fn copy_with_progress(src_file_path: &str, dest_file_path: &str) -> std::io::Result<()> {
-    let mut src_file  = File::open(src_file_path)?;
-    let mut dest_file = File::create(dest_file_path)?;
-
-    let mut buffer = vec![0; 8_388_608];
-    let total_bytes_to_copy = std::fs::metadata(src_file_path)?.len();
-    let mut bytes_copied = 0;
-
-    loop {
-        let n = src_file.read(&mut buffer)?;
-        if n == 0 {
-            break;
-        }
-        bytes_copied += n;
-        let progress = (bytes_copied as f64 / total_bytes_to_copy as f64) * 100.0;
-        std::io::stdout().flush().unwrap();
-        print!("Copying progress: {}%\r", progress.trunc());
-
-        dest_file.write_all(&buffer[..n])?;
-    }
-
-    Ok(())
-}

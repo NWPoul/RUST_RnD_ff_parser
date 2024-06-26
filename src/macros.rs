@@ -11,7 +11,7 @@
 
 // fn old_get_config_values() -> ConfigValues {
 //     let mut settings = Config::default();
-//     if let Err(e) = settings.merge(Cfg_file::with_name("config.toml")) {
+//     if let Err(e) = settings.merge(CfgFile::with_name("config.toml")) {
 //         println!("Failed to load configuration file: {}", e);
 //         println!("default configuration used");
 //     }
@@ -94,7 +94,7 @@ macro_rules! configValues {
         pub fn get_config_values() -> ConfigValues {
             let mut settings = Config::default();
 
-            if let Err(e) = settings.merge(Cfg_file::with_name("config.toml")) {
+            if let Err(e) = settings.merge(CfgFile::with_name("config.toml")) {
                 println!("Failed to load configuration file: {}", e);
                 println!("default configuration used");
             }

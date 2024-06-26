@@ -1,0 +1,18 @@
+# dir path should be in single quote!
+# 'D:\VIDEO_TEMP' - ok
+# "D:\VIDEO_TEMP" - bad!
+
+ffmpeg_dir_path = 'D:\VIDEO_TEMP'
+
+srs_dir_path    = 'D:\VIDEO_TEMP'
+dest_dir_path   = 'D:\VIDEO_TEMP'
+
+output_file_postfix = "_FFCUT"
+
+
+dep_time_correction = 2.0
+time_start_offset = -60.0
+time_end_offset = 3.0
+
+min_accel_trigger = 20.0
+
