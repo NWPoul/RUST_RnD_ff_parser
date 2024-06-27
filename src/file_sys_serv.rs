@@ -1,17 +1,8 @@
 use std::{
     collections::HashSet,
-    fs::{
-        self,
-        File
-    },
-    io::{
-        Read,
-        Write
-    },
-    path::{
-        Path,
-        PathBuf
-    },
+    fs::{ self, File },
+    io::{ Read, Write },
+    path::{ Path, PathBuf },
     time::Duration
 };
 
@@ -19,8 +10,9 @@ use rfd::FileDialog;
 use crossbeam_channel::{Sender, Receiver};
 
 
+use crate::{GREEN, BOLD, RESET};
 
-use crate::{GREEN,  BOLD, RESET};
+
 
 
 
@@ -170,8 +162,7 @@ fn watch_drives_loop(rx: Receiver<()>) -> Option<PathBuf> {
     println!("\nInitial Drives: {:?}", known_drives);
     println!("{BOLD}{GREEN}WHATCHING FOR NEW DRIVE / CARD...\n(press 'ENTER' if want to open file dialog){RESET}");
 
-    //   let current_drives2 = get_current_drives2().0;
-    //   println!("current_drives2 {:?}", current_drives2);
+
     let cur_dir = None;
     loop { //'drivers_loop:
         let current_drives = get_current_drives();
@@ -240,17 +231,4 @@ pub fn watch_drivers(tx: Sender<()>, rx: Receiver<()>) -> Option<PathBuf> {
 
 
 
-use sysinfo::Disks;
 
-pub fn get_current_drives2() -> (Disks, Vec<String>) {
-    let mut drivers_list: Vec<String> = vec![];
-    let disks = Disks::new_with_refreshed_list();
-    for disk in disks.list() {
-        println!("{:?}: {:?}", disk.name(), disk.kind());
-        drivers_list.push(
-            format!("{:?}", disk)
-        )
-
-    }
-    (disks, drivers_list)
-}

@@ -17,9 +17,6 @@ pub mod telemetry_analysis;
 
 
 
-
-
-// use std::io::{self, Read};
 use std::path::PathBuf;
 use crossbeam_channel::{unbounded, Sender, Receiver};
 // use std::sync::mpsc::{channel, Sender};
@@ -38,7 +35,6 @@ use file_sys_serv::{
 };
 
 use ffmpeg_serv::run_ffmpeg;
-// use gpmf_serv::GPMFParsedData;
 
 use telemetry_analysis::{
     get_result_metadata_for_file,
@@ -86,7 +82,7 @@ configValues!(
 
 
 pub fn get_telemetry_for_files(
-    src_files_path_list: &Vec<PathBuf>,
+    src_files_path_list: &[PathBuf],
     config_values      : &ConfigValues,
 ) -> (FileParsingOkData, FileParsingErrData) {
     let mut ok_list : FileParsingOkData  = vec![];
