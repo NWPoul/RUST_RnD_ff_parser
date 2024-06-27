@@ -62,6 +62,7 @@ pub fn get_src_files_path_list(srs_dir_path: &str) -> Option<Vec<PathBuf>> {
     let src_files_path_list = FileDialog::new()
         .add_filter("mp4_files", &["mp4", "MP4"])
         .set_directory(srs_dir_path)
+        .set_can_create_directories(true)
         .pick_files();
     src_files_path_list
 }
