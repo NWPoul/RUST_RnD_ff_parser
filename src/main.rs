@@ -28,10 +28,11 @@ use cli_config::get_cli_merged_config;
 use file_sys_serv::{
     copy_with_progress,
     extract_filename,
-    get_output_file_path,
     get_output_abs_dir,
+    get_output_file_path,
+    get_prefix_stripped_pathstr,
     get_src_files_path_list,
-    open_output_folder,
+    open_output_folder_last_file_selected,
     watch_drivers,
 };
 
@@ -154,9 +155,7 @@ fn print_parsing_results(
     dest_dir       : &PathBuf,
 ) {
     let output_dir_abs_path = get_output_abs_dir(dest_dir);
-    let output_dir_string   = output_dir_abs_path
-        .to_string_lossy()
-        .replace("\\\\?\\", "");
+    let output_dir_string   = get_prefix_stripped_pathstr(&output_dir_abs_path);
 
     println!("\n\n{BOLD}PARSING RESULTS:{RESET}");
 
@@ -247,13 +246,13 @@ fn main() {
 
         let parsing_results = get_telemetry_for_files(&src_files_path_list, &config_values);
 
-        ffmpeg_ok_files(&parsing_results, &config_values);
+        // ffmpeg_ok_files(&parsing_results, &config_values);
 
         print_parsing_results(&parsing_results, &(&config_values.dest_dir_path).into());
 
         copy_invalid_files(&parsing_results.1, &config_values);
 
-        open_output_folder(&config_values.dest_dir_path);
+        let _last_file = open_output_folder_last_file_selected(&config_values.dest_dir_path);
 
         should_continue = true //utils::u_serv::prompt_to_continue("");
     }

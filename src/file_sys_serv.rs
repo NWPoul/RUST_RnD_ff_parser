@@ -13,6 +13,8 @@ use crossbeam_channel::{Sender, Receiver};
 use crate::{GREEN, BOLD, RESET};
 
 
+const VERBATIM_PREFIX: &str = r"\\?\";
+
 
 
 
@@ -31,13 +33,18 @@ pub fn extract_filename<T: AsRef<Path>>(path: T) -> String {
     filename.into()
 }
 
+pub fn get_prefix_stripped_pathstr(path: &PathBuf) -> String {
+    path.to_string_lossy().replace(VERBATIM_PREFIX, "")
+}
+
 
 fn convert_to_absolute_path_or_default<T: AsRef<Path>>(path: T) -> PathBuf {
     let def_path = PathBuf::from(".");
     let path     = PathBuf::from(path.as_ref());
-    fs::canonicalize(path).unwrap_or(
+    let canonical_path = fs::canonicalize(path).unwrap_or(
         fs::canonicalize(def_path).unwrap()
-    )
+    );
+    canonical_path
 }
 
 
@@ -163,53 +170,36 @@ pub fn copy_with_progress(
 
 
 
-pub fn open_output_folder<T: AsRef<Path>>(config_dest_dir: T) {
+pub fn open_output_folder_last_file_selected<T: AsRef<Path>>(
+    config_dest_dir: T
+) -> Result<String, Box<dyn std::error::Error>>  {
     let path = PathBuf::from(config_dest_dir.as_ref());
     let output_dir_path = get_output_abs_dir(&path);
-    let _ = open_folder(&output_dir_path);
+    open_folder_last_file_selected(&output_dir_path)
 }
 
 #[cfg(target_os = "windows")]
-use std::os::windows::ffi::OsStrExt;
-pub fn open_folder(folder_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-    let explorer_command  = "explorer.exe";
-    let full_path = folder_path.canonicalize()?;
-
-    let base_url = format!( "file://{:?}",
-        full_path.clone()
-            .into_os_string()
-            .encode_wide()
-            .chain(std::iter::once(0))
-            .collect::<Vec<u16>>().as_slice()
+pub fn open_folder_last_file_selected(folder_path: &PathBuf) -> Result<String, Box<dyn std::error::Error>> {
+    let select_latest_file_command = format!(
+        "Get-ChildItem -Path \"{}\\\" | Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName",
+        get_prefix_stripped_pathstr(folder_path)
     );
-    println!("base_url: {base_url}");
+    let output = std::process::Command::new("powershell")
+        .arg("-Command")
+        .arg(select_latest_file_command)
+        .output()
+        .expect("Failed to execute command");
 
-    let last_modified_file = fs::read_dir(full_path)?
-       .filter_map(Result::ok)
-       .filter(|e| e.metadata().unwrap().is_file())
-       .max_by_key(|e| e.metadata().unwrap().modified().unwrap());
+    let latest_file_name = String::from_utf8_lossy(&output.stdout);
 
-
-       println!("last_modified_file: {:?}", &last_modified_file);
-
-    match last_modified_file {
-        Some(file_entry) => {
-            let file_path = file_entry.path();
-            let os_string = file_path.into_os_string();
-            let url = format!("{}/{:?}", base_url, os_string);
-
-            println!("file to select: {:?}", &url);
-            std::process::Command::new(explorer_command)
-              .arg(url)
-              .spawn()?;
-        },
-        None => {
-            // Handle the case where the directory is empty or contains only directories
-            println!("No files found in the directory.");
-        }
-    };
-
-    Ok(())
+    let _ = std::process::Command::new("explorer.exe")
+        .args(&[
+            "/select,",
+            &latest_file_name.trim()
+        ])
+        .output()
+        .expect("Failed to execute command");
+    Ok(latest_file_name.to_string())
 }
 
 #[cfg(target_os = "linux")]
