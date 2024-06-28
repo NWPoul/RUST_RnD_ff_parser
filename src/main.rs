@@ -76,7 +76,9 @@ configValues!(
     ( dep_time_correction, f64    , DEP_TIME_CORRECTION ),
     ( time_start_offset  , f64    , TIME_START_OFFSET ),
     ( time_end_offset    , f64    , TIME_END_OFFSET ),
-    ( min_accel_trigger  , f64    , MIN_ACCEL_TRIGGER )
+    ( min_accel_trigger  , f64    , MIN_ACCEL_TRIGGER ),
+
+    ( no_ffmpeg_processing, bool  , false )
 );
 
 
@@ -246,7 +248,9 @@ fn main() {
 
         let parsing_results = get_telemetry_for_files(&src_files_path_list, &config_values);
 
-        // ffmpeg_ok_files(&parsing_results, &config_values);
+        if config_values.no_ffmpeg_processing == false {
+            ffmpeg_ok_files(&parsing_results, &config_values);
+        }
 
         print_parsing_results(&parsing_results, &(&config_values.dest_dir_path).into());
 
