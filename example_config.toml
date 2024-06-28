@@ -9,6 +9,8 @@ dest_dir_path   = 'D:\VIDEO_TEMP'
 
 output_file_postfix = "_FFCUT"
 
+no_ffmpeg_processing = false
+
 
 dep_time_correction = 2.0
 time_start_offset = -60.0

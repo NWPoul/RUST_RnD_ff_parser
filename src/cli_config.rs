@@ -58,6 +58,5 @@ pub fn get_cli_merged_config(mut config_values: ConfigValues) -> ConfigValues {
         config_values.no_ffmpeg_processing = true;
         println!("CLI config overrade: NO FFMPEG MODE ON!")
     }
-
     config_values
 }
