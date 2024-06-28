@@ -26,8 +26,13 @@ use config::{Config, File as CfgFile};
 use cli_config::get_cli_merged_config;
 
 use file_sys_serv::{
-    // convert_to_absolute,
-    convert_to_absolute, copy_with_progress, extract_filename, get_output_filename, get_src_files_path_list, watch_drivers
+    copy_with_progress,
+    extract_filename,
+    get_output_file_path,
+    get_output_abs_dir,
+    get_src_files_path_list,
+    open_output_folder,
+    watch_drivers,
 };
 
 use ffmpeg_serv::run_ffmpeg;
@@ -101,7 +106,7 @@ pub fn get_ffmpeg_status_for_file(
     file_result_data: &FileTelemetryResult,
     config_values   : &ConfigValues,
 ) -> Result<String, String> {
-    let output_file_path = get_output_filename(
+    let output_file_path = get_output_file_path(
         src_file_path,
         &(&config_values.dest_dir_path).into(),
         &config_values.output_file_postfix,
@@ -148,9 +153,7 @@ fn print_parsing_results(
     parsing_results: &(FileParsingOkData, FileParsingErrData),
     dest_dir       : &PathBuf,
 ) {
-    let output_file_path = get_output_filename(&"".into(), dest_dir, "", "");
-    let output_dir_path  = output_file_path.parent().unwrap();
-    let output_dir_abs_path = convert_to_absolute(&output_dir_path);
+    let output_dir_abs_path = get_output_abs_dir(dest_dir);
     let output_dir_string   = output_dir_abs_path
         .to_string_lossy()
         .replace("\\\\?\\", "");
@@ -195,7 +198,7 @@ fn copy_invalid_files(err_results: &FileParsingErrData, config_values: &ConfigVa
     }
 
     for (src_file_path, _) in err_results {
-        let dest_file_path = get_output_filename(
+        let dest_file_path = get_output_file_path(
             src_file_path,
             &(&config_values.dest_dir_path).into(),
             "_NA", ""
@@ -249,6 +252,8 @@ fn main() {
         print_parsing_results(&parsing_results, &(&config_values.dest_dir_path).into());
 
         copy_invalid_files(&parsing_results.1, &config_values);
+
+        open_output_folder(&config_values.dest_dir_path);
 
         should_continue = true //utils::u_serv::prompt_to_continue("");
     }

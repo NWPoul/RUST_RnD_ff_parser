@@ -32,7 +32,7 @@ pub fn extract_filename<T: AsRef<Path>>(path: T) -> String {
 }
 
 
-pub fn convert_to_absolute<T: AsRef<Path>>(path: T) -> PathBuf {
+fn convert_to_absolute_path_or_default<T: AsRef<Path>>(path: T) -> PathBuf {
     let def_path = PathBuf::from(".");
     let path     = PathBuf::from(path.as_ref());
     fs::canonicalize(path).unwrap_or(
@@ -72,18 +72,18 @@ pub fn get_src_files_path_list<T: AsRef<Path>>(srs_dir_path: T) -> Option<Vec<Pa
 }
 
 
-pub fn get_output_filename(
+pub fn get_output_abs_dir(dest_dir_path: &PathBuf) -> PathBuf {
+    convert_to_absolute_path_or_default(dest_dir_path)
+}
+
+pub fn get_output_file_path(
     src_file_path      : &PathBuf,
     dest_dir_path      : &PathBuf,
     output_file_postfix: &str,
     device_info        : &str,
 ) -> PathBuf {
     let def_path = PathBuf::from(".");
-    let mut dest_dir_path = PathBuf::from(dest_dir_path);
-    if !dest_dir_path.exists() {
-        println!("dest_dir_path : {:?} don't exist\n", dest_dir_path);
-        dest_dir_path = PathBuf::from(src_file_path.parent().unwrap())
-    }
+    let dest_dir_path = get_output_abs_dir(dest_dir_path);
     let output_file_name = format!(
         "{} {}{}.mp4",
         device_info,
@@ -163,6 +163,64 @@ pub fn copy_with_progress(
 
 
 
+pub fn open_output_folder<T: AsRef<Path>>(config_dest_dir: T) {
+    let path = PathBuf::from(config_dest_dir.as_ref());
+    let output_dir_path = get_output_abs_dir(&path);
+    let _ = open_folder(&output_dir_path);
+}
+
+#[cfg(target_os = "windows")]
+use std::os::windows::ffi::OsStrExt;
+pub fn open_folder(folder_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    let explorer_command  = "explorer.exe";
+    let full_path = folder_path.canonicalize()?;
+
+    let base_url = format!( "file://{:?}",
+        full_path.clone()
+            .into_os_string()
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect::<Vec<u16>>().as_slice()
+    );
+    println!("base_url: {base_url}");
+
+    let last_modified_file = fs::read_dir(full_path)?
+       .filter_map(Result::ok)
+       .filter(|e| e.metadata().unwrap().is_file())
+       .max_by_key(|e| e.metadata().unwrap().modified().unwrap());
+
+
+       println!("last_modified_file: {:?}", &last_modified_file);
+
+    match last_modified_file {
+        Some(file_entry) => {
+            let file_path = file_entry.path();
+            let os_string = file_path.into_os_string();
+            let url = format!("{}/{:?}", base_url, os_string);
+
+            println!("file to select: {:?}", &url);
+            std::process::Command::new(explorer_command)
+              .arg(url)
+              .spawn()?;
+        },
+        None => {
+            // Handle the case where the directory is empty or contains only directories
+            println!("No files found in the directory.");
+        }
+    };
+
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+pub fn open_folder(folder_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    let command = config.get_string("open_folder_command")?;
+    let full_path = Path::new(folder_path).canonicalize()?;
+    std::process::Command::new(command)
+        .arg(full_path)
+        .spawn()?;
+    Ok(())
+}
 
 
 fn watch_drives_loop(rx: Receiver<()>) -> Option<PathBuf> {
