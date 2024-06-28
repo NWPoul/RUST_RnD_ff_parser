@@ -27,11 +27,7 @@ use cli_config::get_cli_merged_config;
 
 use file_sys_serv::{
     // convert_to_absolute,
-    copy_with_progress,
-    extract_filename,
-    get_output_filename,
-    get_src_files_path_list,
-    watch_drivers,
+    convert_to_absolute, copy_with_progress, extract_filename, get_output_filename, get_src_files_path_list, watch_drivers
 };
 
 use ffmpeg_serv::run_ffmpeg;
@@ -152,16 +148,16 @@ fn print_parsing_results(
     parsing_results: &(FileParsingOkData, FileParsingErrData),
     dest_dir       : &PathBuf,
 ) {
-    let def_path = PathBuf::from(".");
-    let output_file_path = get_output_filename(&PathBuf::from(""), dest_dir, "", "");
-    let dest_dir_string = output_file_path
-        .parent()
-        .unwrap_or(&def_path)
-        .to_string_lossy();
+    let output_file_path = get_output_filename(&"".into(), dest_dir, "", "");
+    let output_dir_path  = output_file_path.parent().unwrap();
+    let output_dir_abs_path = convert_to_absolute(&output_dir_path);
+    let output_dir_string   = output_dir_abs_path
+        .to_string_lossy()
+        .replace("\\\\?\\", "");
 
     println!("\n\n{BOLD}PARSING RESULTS:{RESET}");
 
-    println!("\n{BOLD}{GREEN}OK: => {}{RESET}", &dest_dir_string);
+    println!("\n{BOLD}{GREEN}OK: => {}{RESET}", &output_dir_string);
     for res in &parsing_results.0 {
         println!(
             "{GREEN}{:?}{RESET} {:?}",
@@ -250,7 +246,7 @@ fn main() {
 
         ffmpeg_ok_files(&parsing_results, &config_values);
 
-        print_parsing_results(&parsing_results, &src_dir);
+        print_parsing_results(&parsing_results, &(&config_values.dest_dir_path).into());
 
         copy_invalid_files(&parsing_results.1, &config_values);
 

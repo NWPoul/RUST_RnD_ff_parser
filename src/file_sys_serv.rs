@@ -32,8 +32,12 @@ pub fn extract_filename<T: AsRef<Path>>(path: T) -> String {
 }
 
 
-pub fn convert_to_absolute<T: AsRef<Path>>(path: T) -> Result<PathBuf, std::io::Error> {
-    fs::canonicalize(PathBuf::from(path.as_ref()))
+pub fn convert_to_absolute<T: AsRef<Path>>(path: T) -> PathBuf {
+    let def_path = PathBuf::from(".");
+    let path     = PathBuf::from(path.as_ref());
+    fs::canonicalize(path).unwrap_or(
+        fs::canonicalize(def_path).unwrap()
+    )
 }
 
 
@@ -114,7 +118,7 @@ pub fn get_current_drives() -> HashSet<String> {
 }
 
 
-pub fn get_src_path_for_drive(drivepath_str: &PathBuf) -> PathBuf {
+pub fn get_src_path_for_ext_drive(drivepath_str: &PathBuf) -> PathBuf {
     let dcim_path  = format!("{:?}\\DCIM", drivepath_str);
     let gopro_path = format!("{}\\100GOPRO", dcim_path);
         // println!("gopro_path: {gopro_path}");
@@ -166,7 +170,6 @@ fn watch_drives_loop(rx: Receiver<()>) -> Option<PathBuf> {
     println!("\nInitial Drives: {:?}", known_drives);
     println!("{BOLD}{GREEN}WHATCHING FOR NEW DRIVE / CARD...\n(press 'ENTER' if want to open file dialog){RESET}");
 
-
     let cur_dir = None;
     loop { //'drivers_loop:
         let current_drives = get_current_drives();
@@ -176,7 +179,7 @@ fn watch_drives_loop(rx: Receiver<()>) -> Option<PathBuf> {
                 println!("{BOLD}{GREEN}New drive detected: {}{RESET}", drive);
                 match fs::read_dir(drive) {
                     Ok(_entries) => {
-                        return Some(get_src_path_for_drive(&drive.as_str().into()));
+                        return Some(get_src_path_for_ext_drive(&drive.as_str().into()));
                     }
                     Err(e) => {
                         println!("Error reading drive {}: {}", drive, e);
