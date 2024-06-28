@@ -16,28 +16,28 @@ use crate::{GREEN, BOLD, RESET};
 
 
 
-pub fn check_path(path_str: &str) -> bool {
-    let path = PathBuf::from(path_str);
-    path.exists()
+fn check_path<T: AsRef<Path>>(path: T) -> bool {
+    let path_buf = PathBuf::from(path.as_ref());
+    path_buf.exists()
 }
 
 
-
-pub fn extract_filename(path: &PathBuf) -> String {
-    path
-       .file_name()
-       .and_then(|name| name.to_str())
-       .map(String::from)
-       .unwrap_or_else(|| String::from("<unknown>"))
+pub fn extract_filename<T: AsRef<Path>>(path: T) -> String {
+    let path_buf = PathBuf::from(path.as_ref());
+    let filename = path_buf
+        .file_name()
+        .unwrap_or(std::ffi::OsStr::new("default"))
+        .to_string_lossy();
+    filename.into()
 }
 
 
-pub fn convert_to_absolute(dest_dir: &str) -> Result<PathBuf, std::io::Error> {
-    fs::canonicalize(PathBuf::from(dest_dir))
+pub fn convert_to_absolute<T: AsRef<Path>>(path: T) -> Result<PathBuf, std::io::Error> {
+    fs::canonicalize(PathBuf::from(path.as_ref()))
 }
 
 
-pub fn get_src_file_path(srs_dir_path: &str) -> Option<PathBuf> {
+pub fn get_src_file_path(srs_dir_path: &PathBuf) -> Option<PathBuf> {
     let paths = fs::read_dir(srs_dir_path)
         .expect("Failed to read directory")
         .filter_map(Result::ok)
@@ -58,7 +58,7 @@ pub fn get_src_file_path(srs_dir_path: &str) -> Option<PathBuf> {
 }
 
 
-pub fn get_src_files_path_list(srs_dir_path: &str) -> Option<Vec<PathBuf>> {
+pub fn get_src_files_path_list<T: AsRef<Path>>(srs_dir_path: T) -> Option<Vec<PathBuf>> {
     let src_files_path_list = FileDialog::new()
         .add_filter("mp4_files", &["mp4", "MP4"])
         .set_directory(srs_dir_path)
@@ -70,7 +70,7 @@ pub fn get_src_files_path_list(srs_dir_path: &str) -> Option<Vec<PathBuf>> {
 
 pub fn get_output_filename(
     src_file_path      : &PathBuf,
-    dest_dir_path      : &str,
+    dest_dir_path      : &PathBuf,
     output_file_postfix: &str,
     device_info        : &str,
 ) -> PathBuf {
@@ -114,8 +114,8 @@ pub fn get_current_drives() -> HashSet<String> {
 }
 
 
-pub fn get_src_path_for_drive(drivepath_str: &str) -> PathBuf {
-    let dcim_path  = format!("{}\\DCIM", drivepath_str);
+pub fn get_src_path_for_drive(drivepath_str: &PathBuf) -> PathBuf {
+    let dcim_path  = format!("{:?}\\DCIM", drivepath_str);
     let gopro_path = format!("{}\\100GOPRO", dcim_path);
         // println!("gopro_path: {gopro_path}");
         if check_path(&gopro_path) {
@@ -130,7 +130,10 @@ pub fn get_src_path_for_drive(drivepath_str: &str) -> PathBuf {
 
 
 
-pub fn copy_with_progress(src_file_path: &str, dest_file_path: &str) -> std::io::Result<()> {
+pub fn copy_with_progress(
+    src_file_path : &PathBuf,
+    dest_file_path: &PathBuf,
+) -> std::io::Result<()> {
     let mut src_file  = File::open(src_file_path)?;
     let mut dest_file = File::create(dest_file_path)?;
 
@@ -173,7 +176,7 @@ fn watch_drives_loop(rx: Receiver<()>) -> Option<PathBuf> {
                 println!("{BOLD}{GREEN}New drive detected: {}{RESET}", drive);
                 match fs::read_dir(drive) {
                     Ok(_entries) => {
-                        return Some(get_src_path_for_drive(drive));
+                        return Some(get_src_path_for_drive(&drive.as_str().into()));
                     }
                     Err(e) => {
                         println!("Error reading drive {}: {}", drive, e);

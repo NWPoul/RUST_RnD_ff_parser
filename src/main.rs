@@ -106,8 +106,8 @@ pub fn get_ffmpeg_status_for_file(
     config_values   : &ConfigValues,
 ) -> Result<String, String> {
     let output_file_path = get_output_filename(
-        &src_file_path,
-        &config_values.dest_dir_path,
+        src_file_path,
+        &(&config_values.dest_dir_path).into(),
         &config_values.output_file_postfix,
         &file_result_data.device_name,
     );
@@ -150,17 +150,18 @@ pub fn ffmpeg_ok_files(
 
 fn print_parsing_results(
     parsing_results: &(FileParsingOkData, FileParsingErrData),
-    dest_dir: &str,
+    dest_dir       : &PathBuf,
 ) {
     let def_path = PathBuf::from(".");
     let output_file_path = get_output_filename(&PathBuf::from(""), dest_dir, "", "");
     let dest_dir_string = output_file_path
         .parent()
-        .unwrap_or(&def_path);
+        .unwrap_or(&def_path)
+        .to_string_lossy();
 
     println!("\n\n{BOLD}PARSING RESULTS:{RESET}");
 
-    println!("\n{BOLD}{GREEN}OK: => {}{RESET}", &dest_dir_string.to_string_lossy());
+    println!("\n{BOLD}{GREEN}OK: => {}{RESET}", &dest_dir_string);
     for res in &parsing_results.0 {
         println!(
             "{GREEN}{:?}{RESET} {:?}",
@@ -198,10 +199,14 @@ fn copy_invalid_files(err_results: &FileParsingErrData, config_values: &ConfigVa
     }
 
     for (src_file_path, _) in err_results {
-        let dest_file_path = get_output_filename(src_file_path, &config_values.dest_dir_path, "_NA", "");
+        let dest_file_path = get_output_filename(
+            src_file_path,
+            &(&config_values.dest_dir_path).into(),
+            "_NA", ""
+        );
         let copy_res = copy_with_progress(
-            src_file_path.to_str().unwrap(),
-            &dest_file_path.to_str().unwrap()
+            src_file_path,
+            &dest_file_path,
         );
         match copy_res {
             Ok(number) => {
@@ -232,7 +237,7 @@ fn main() {
         println!("main::whatched_dir: {:?}", whatched_dir);
         let src_dir = whatched_dir.unwrap_or((&config_values.srs_dir_path).into());
 
-        let src_files_path_list = match get_src_files_path_list(&src_dir.to_string_lossy()) {
+        let src_files_path_list = match get_src_files_path_list(&src_dir) {
             Some(path_list) => path_list,
             None => {
                 println!("NO MP4 FILES CHOSEN!");
@@ -245,7 +250,7 @@ fn main() {
 
         ffmpeg_ok_files(&parsing_results, &config_values);
 
-        print_parsing_results(&parsing_results, &src_dir.to_string_lossy());
+        print_parsing_results(&parsing_results, &src_dir);
 
         copy_invalid_files(&parsing_results.1, &config_values);
 
