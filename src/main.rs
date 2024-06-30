@@ -108,10 +108,7 @@ pub fn parse_mp4_files(
 
 fn plot_parsed_data(data: &(Vec<(f64, f64, f64)>, Vec<f64>)) {
     crate::analise::gnu_plot_single(&data.1);
-    // for data in parsed_data {
-    //     // crate::analise::gnu_plot_xyz(&(data.0));
-    //     crate::analise::gnu_plot_single(&data.1);
-    // }
+    crate::analise::gnu_plot_xyz(&(data.0));
 }
 
 

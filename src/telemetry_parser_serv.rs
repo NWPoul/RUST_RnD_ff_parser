@@ -128,7 +128,7 @@ pub fn parse_telemetry_from_mp4_file(input_file: &str) -> Result<TelemetryParsed
 
 pub fn get_result_metadata_for_file(input_file: &str) -> Result<TelemetryResultData, String> {
     let telemetry_data = parse_telemetry_from_mp4_file(input_file)?;
-    let telemetry_sma_acc_data = get_sma_list(&telemetry_data.acc_data, 50);
+    let telemetry_sma_acc_data = get_sma_list(&telemetry_data.acc_data, 200);
     Ok(TelemetryResultData{
         cam_info: telemetry_data.cam_info,
         acc_data: TelemetryResultAccData{

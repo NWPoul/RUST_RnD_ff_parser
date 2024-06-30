@@ -108,7 +108,7 @@ pub fn parse_sensor_data(
     let (max_acc_time, max_acc_value) = get_max_vec_data(sma_list);
 
     // crate::file_sys_serv::save_log_to_txt(&v_agr_accel_data_list, src_file_path);
-    crate::file_sys_serv::save_det_log_to_txt(&plain_xyz_list, src_file_path);
+    // crate::file_sys_serv::save_det_log_to_txt(&plain_xyz_list, src_file_path);
 
     crate::analise::gnu_plot_xyz(&plain_xyz_list);
 
