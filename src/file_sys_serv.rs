@@ -1,18 +1,20 @@
 use std::{
     collections::HashSet,
     fs::{ self, File },
-    io::{ Read, Write },
+    io::{ self, Read, Write },
     path::{ Path, PathBuf },
-    time::Duration
+    time::{ Duration, SystemTime },
 };
 
 use rfd::FileDialog;
 use crossbeam_channel::{Sender, Receiver};
 
 
-use crate::{GREEN, BOLD, RESET};
+use crate::utils::error::MyResult;
+use crate::{BOLD, GREEN, RESET};
 
 
+// const MIN_SYS_TIME: SystemTime = SystemTime::UNIX_EPOCH;
 const VERBATIM_PREFIX: &str = r"\\?\";
 
 
@@ -126,16 +128,17 @@ pub fn get_current_drives() -> HashSet<String> {
 
 
 pub fn get_src_path_for_ext_drive(drivepath_str: &PathBuf) -> PathBuf {
-    let dcim_path  = format!("{:?}\\DCIM", drivepath_str);
-    let gopro_path = format!("{}\\100GOPRO", dcim_path);
-        // println!("gopro_path: {gopro_path}");
-        if check_path(&gopro_path) {
-            return gopro_path.into();
-        }
-        if check_path(&dcim_path) {
-            return dcim_path.into();
-        }
-        drivepath_str.into()
+    let dcim_path  = drivepath_str.join("DCIM");
+    let gopro_path = dcim_path.join("100GOPRO");
+
+    let res_path = if check_path(&gopro_path) {
+        gopro_path
+    } else if check_path(&dcim_path) {
+        dcim_path
+    } else {
+        drivepath_str.clone()
+    };
+    res_path
 }
 
 
@@ -170,27 +173,31 @@ pub fn copy_with_progress(
 
 
 
-pub fn open_output_folder_last_file_selected<T: AsRef<Path>>(
-    config_dest_dir: T
-) -> Result<String, Box<dyn std::error::Error>>  {
-    let path = PathBuf::from(config_dest_dir.as_ref());
-    let output_dir_path = get_output_abs_dir(&path);
-    open_folder_last_file_selected(&output_dir_path)
+pub fn get_last_file(folder_path: &PathBuf) -> MyResult<fs::DirEntry> {
+    let last_modified_file = fs::read_dir(folder_path)
+       .expect("Couldn't access local directory")
+       .filter_map(Result::ok)
+       .filter(|entry| entry.path().is_file())
+       .max_by_key(|entry| {
+            match entry.metadata() {
+                Ok(metadata) => metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH),
+                Err(_)       => SystemTime::UNIX_EPOCH,
+            }
+        });
+        match last_modified_file {
+            Some(dir_entry) => return Ok(dir_entry),
+            None => return Err(Box::new(io::Error::new(
+                io::ErrorKind::NotFound,
+                "No  correct files found in the directory",
+            ))),
+        }
+
 }
 
 #[cfg(target_os = "windows")]
-pub fn open_folder_last_file_selected(folder_path: &PathBuf) -> Result<String, Box<dyn std::error::Error>> {
-    let select_latest_file_command = format!(
-        "Get-ChildItem -Path \"{}\\\" | Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName",
-        get_prefix_stripped_pathstr(folder_path)
-    );
-    let output = std::process::Command::new("powershell")
-        .arg("-Command")
-        .arg(select_latest_file_command)
-        .output()
-        .expect("Failed to execute command");
-
-    let latest_file_name = String::from_utf8_lossy(&output.stdout);
+pub fn open_folder_last_file_selected(folder_path: &PathBuf) -> MyResult<String> {
+    let latest_file      = get_last_file(folder_path)?;
+    let latest_file_name = get_prefix_stripped_pathstr(&latest_file.path());
 
     let _ = std::process::Command::new("explorer.exe")
         .args(&[
@@ -202,15 +209,15 @@ pub fn open_folder_last_file_selected(folder_path: &PathBuf) -> Result<String, B
     Ok(latest_file_name.to_string())
 }
 
-#[cfg(target_os = "linux")]
-pub fn open_folder(folder_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-    let command = config.get_string("open_folder_command")?;
-    let full_path = Path::new(folder_path).canonicalize()?;
-    std::process::Command::new(command)
-        .arg(full_path)
-        .spawn()?;
-    Ok(())
+
+pub fn open_output_folder_last_file_selected<T: AsRef<Path>>(
+    config_dest_dir: T
+) -> Result<String, Box<dyn std::error::Error>>  {
+    let path = PathBuf::from(config_dest_dir.as_ref());
+    let output_dir_path = get_output_abs_dir(&path);
+    open_folder_last_file_selected(&output_dir_path)
 }
+
 
 
 fn watch_drives_loop(rx: Receiver<()>) -> Option<PathBuf> {
