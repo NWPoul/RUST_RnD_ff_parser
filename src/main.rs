@@ -222,7 +222,7 @@ fn copy_invalid_files(err_results: &FileParsingErrData, config_values: &ConfigVa
 
 
 
-fn main() {
+fn main_p() {
     let mut config_values = get_config_values();
     config_values = get_cli_merged_config(config_values);
 
@@ -262,3 +262,54 @@ fn main() {
 
 
 
+
+
+
+
+
+
+use eframe::{egui, epi};
+use egui_file_dialog::FileDialog;
+
+struct MyApp {
+    tx: Sender<()>,
+    rx: Receiver<()>,
+    // Additional fields for your application state
+}
+
+impl epi::App for MyApp {
+    fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
+        egui::Window::new("My App Window")
+            .show(ctx, |ui| {
+                // Open file dialog button
+                if ui.button("Open File...").clicked() {
+                    let file_dialog = FileDialog::new();
+                    if let Some(file_path) = file_dialog.open_file() {
+                        println!("Selected file: {:?}", file_path);
+                        // Send a message to another thread via channel
+                        self.tx.send(()).unwrap();
+                    }
+                }
+
+                // Your GUI elements and logic here
+            });
+    }
+}
+
+
+fn main() {
+    let (tx, rx): (Sender<()>, Receiver<()>) = unbounded();
+
+    // Start the GUI thread
+    std::thread::spawn(move || {
+        eframe::run_native(Box::new(MyApp { tx, rx }), eframe::NativeOptions::default());
+    });
+
+    // Start the CLI thread
+    std::thread::spawn(move || {
+        cli_operation(tx);
+    });
+
+    // Wait for both threads to finish
+    rx.recv().unwrap();
+}
