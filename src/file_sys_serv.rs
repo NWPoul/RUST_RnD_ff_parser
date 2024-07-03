@@ -11,7 +11,9 @@ use crossbeam_channel::{Sender, Receiver};
 
 
 use crate::utils::error::MyResult;
-use crate::{BOLD, GREEN, RESET};
+use crate::utils::u_serv::cli_output_format::{
+    RESET, BOLD, GREEN,
+};
 
 
 // const MIN_SYS_TIME: SystemTime = SystemTime::UNIX_EPOCH;
@@ -115,12 +117,27 @@ pub fn get_output_file_path(
 
 
 
+#[cfg(target_os = "windows")]
 pub fn get_current_drives() -> HashSet<String> {
     let mut drives = HashSet::new();
     for letter in 'A'..='Z' {
         let drive_path = format!("{}:\\", letter);
         if Path::new(&drive_path).exists() {
             drives.insert(drive_path);
+        }
+    }
+    drives
+}
+
+#[cfg(target_os = "linux")]
+pub fn get_current_drives() -> HashSet<String> {
+    let mut drives = HashSet::new();
+    let mount_points = vec!["/mnt", "/media"];
+    for mount_point in &mount_points {
+        if fs::metadata(mount_point).is_ok() {
+            if fs::read_dir(mount_point).unwrap().next().is_some() {
+                drives.insert(mount_point.to_string());
+            }
         }
     }
     drives
@@ -195,7 +212,7 @@ pub fn get_last_file(folder_path: &PathBuf) -> MyResult<fs::DirEntry> {
 }
 
 #[cfg(target_os = "windows")]
-pub fn open_folder_last_file_selected(folder_path: &PathBuf) -> MyResult<String> {
+pub fn open_folder_last_file_selected(folder_path: &PathBuf) -> MyResult<fs::DirEntry> {
     let latest_file      = get_last_file(folder_path)?;
     let latest_file_name = get_prefix_stripped_pathstr(&latest_file.path());
 
@@ -206,13 +223,19 @@ pub fn open_folder_last_file_selected(folder_path: &PathBuf) -> MyResult<String>
         ])
         .output()
         .expect("Failed to execute command");
-    Ok(latest_file_name.to_string())
+    Ok(latest_file)
+}
+#[cfg(not(target_os = "windows"))]
+pub fn open_folder_last_file_selected1(folder_path: &PathBuf) -> MyResult<fs::DirEntry> {
+    Err(Box::new(
+        io::Error::new(io::ErrorKind::Other, "Not implemented yet")
+    ))
 }
 
 
 pub fn open_output_folder_last_file_selected<T: AsRef<Path>>(
     config_dest_dir: T
-) -> Result<String, Box<dyn std::error::Error>>  {
+) -> Result<fs::DirEntry, Box<dyn std::error::Error>>  {
     let path = PathBuf::from(config_dest_dir.as_ref());
     let output_dir_path = get_output_abs_dir(&path);
     open_folder_last_file_selected(&output_dir_path)

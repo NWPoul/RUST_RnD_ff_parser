@@ -3,11 +3,11 @@
 pub mod utils {
     pub mod error;
     pub mod u_serv;
-    pub use u_serv::abs_max;
 }
+
 pub mod macros;
 
-mod cli_config;
+pub mod cli_config;
 
 pub mod file_sys_serv;
 pub mod ffmpeg_serv;
@@ -44,14 +44,11 @@ use telemetry_analysis::{
 };
 
 
+use utils::u_serv::cli_output_format::{
+    RESET, BOLD, RED, GREEN,
+};
 
 
-
-pub const GREEN : &str = "\x1B[32m";
-pub const RED   : &str = "\x1B[31m";
-pub const YELLOW: &str = "\x1B[33m";
-pub const BOLD  : &str = "\x1B[1m";
-pub const RESET : &str = "\x1B[0m";
 
 
 const DEF_DIR            : &str = ".";

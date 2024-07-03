@@ -1,5 +1,19 @@
 
-use crate::{BOLD, YELLOW, RESET};
+
+
+pub mod cli_output_format {
+    pub const GREEN : &str = "\x1B[32m";
+    pub const RED   : &str = "\x1B[31m";
+    pub const YELLOW: &str = "\x1B[33m";
+    pub const BOLD  : &str = "\x1B[1m";
+    pub const RESET : &str = "\x1B[0m";
+}
+
+use cli_output_format::{
+    RESET, BOLD, YELLOW
+};
+
+
 
 pub fn prompt_to(sys_msg: &str, msg: &str) -> bool {
     println!("{BOLD}{YELLOW}{msg}\n{sys_msg}{RESET}\n");
