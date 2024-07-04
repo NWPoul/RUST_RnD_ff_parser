@@ -16,7 +16,6 @@ use config::{Config, File as Cfg_file};
 pub mod macros;
 pub mod file_sys_serv;
 
-pub mod gpmf_serv;
 pub mod telemetry_parser_serv;
 
 mod cli_clonfig;
