@@ -6,6 +6,17 @@ pub mod utils {
     pub use u_serv::abs_max;
 }
 
+pub mod macros;
+pub mod analise;
+
+pub mod telemetry_parser_serv;
+pub mod file_sys_serv;
+pub mod plot_serv;
+
+mod cli_clonfig;
+
+
+
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -14,21 +25,12 @@ use lazy_static::lazy_static;
 use rfd::FileDialog;
 use config::{Config, File as Cfg_file};
 
-
-
-pub mod macros;
-pub mod file_sys_serv;
-
-pub mod telemetry_parser_serv;
-
-mod cli_clonfig;
 use cli_clonfig::get_cli_merged_config;
 
 
 // use file_sys_serv::get_output_filename;
 use telemetry_parser_serv::{get_result_metadata_for_file, TelemetryParsedData};
 
-pub mod analise;
 
 
 lazy_static! {
@@ -93,33 +95,18 @@ pub fn parse_mp4_files(
     let mut result_list:Vec<Result<TelemetryParsedData, String>> = vec![];
 
     for src_file_path in src_files_path_list {
-        let file_res = match get_result_metadata_for_file(&src_file_path.to_string_lossy()) {
-            Ok(res_acc_data) => Ok(res_acc_data.acc_data),
-            Err(err_str)     => Err(err_str)
-        };
+        let file_res = get_result_metadata_for_file(&src_file_path.to_string_lossy());
         result_list.push(file_res);
     };
     result_list
 }
 
 
-// fn print_parsing_results(parsing_result: Vec<Result<Child, IOError>>) {
-//     println!("\nPARSING RESULTS:");
-//     for res in parsing_result {
-//         match res {
-//             Ok(content) => println!("OK: {content:?}"),
-//             Err(error)  => println!("ERR: {error}")
-//         }
-//     }
-// }
-
-fn plot_parsed_data(data: &(Vec<(f64, f64, f64)>, Vec<f64>)) {
-    crate::analise::gnu_plot_xyz(&(data.0));
-    crate::analise::gnu_plot_single(&data.1);
-}
 
 fn plot_parsed_analised_base_series(data: &Vec<(f64, f64, f64)>, base_series: &[usize]) {
-    crate::analise::gnu_plot_series(data, base_series);
+    crate::plot_serv::gnu_plot_series(data, base_series);
+
+    // crate::plot_serv::gnu_plot_single(&data.1);
 }
 
 
@@ -130,7 +117,7 @@ fn input_sma_base() {
     std::io::stdin()
         .read_line(&mut input)
         .expect("Failed to read line");
-    *num = input.trim().parse::<usize>().unwrap();
+    *num = input.trim().parse::<usize>().unwrap_or(*num);
 }
 
 
@@ -155,19 +142,13 @@ fn main() {
             for res in parsing_result {
                 match res {
                     Ok(res_data) => plot_parsed_analised_base_series(
-                        &res_data.xyz,
+                        &res_data.acc_data,
                         &[50,100,150,200]
                     ),
-                    // Ok(res_data) => plot_parsed_data(
-                    //     &(
-                    //         res_data.xyz,
-                    //         res_data.sma,
-                    //     )
-                    // ),
                     Err(error)  => println!("ERR: {error}"),
                 }
             }
-            
+
             input_sma_base();
     }
 }
