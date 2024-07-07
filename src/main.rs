@@ -7,6 +7,9 @@ pub mod utils {
 }
 
 use std::path::PathBuf;
+use std::sync::Mutex;
+
+use lazy_static::lazy_static;
 
 use rfd::FileDialog;
 use config::{Config, File as Cfg_file};
@@ -23,9 +26,14 @@ use cli_clonfig::get_cli_merged_config;
 
 
 // use file_sys_serv::get_output_filename;
-use telemetry_parser_serv::{get_result_metadata_for_file, TelemetryResultAccData};
+use telemetry_parser_serv::{get_result_metadata_for_file, TelemetryParsedData};
 
 pub mod analise;
+
+
+lazy_static! {
+    pub static ref SMA_BASE: Mutex<usize> = Mutex::new(50);
+}
 
 
 
@@ -81,8 +89,8 @@ pub fn format_acc_datablock(acc_n_time: &(f64, f64)) -> String {
 pub fn parse_mp4_files(
     src_files_path_list: &Vec<PathBuf>,
     // config_values      : ConfigValues
-) -> Vec<Result<TelemetryResultAccData, String>> {
-    let mut result_list:Vec<Result<TelemetryResultAccData, String>> = vec![];
+) -> Vec<Result<TelemetryParsedData, String>> {
+    let mut result_list:Vec<Result<TelemetryParsedData, String>> = vec![];
 
     for src_file_path in src_files_path_list {
         let file_res = match get_result_metadata_for_file(&src_file_path.to_string_lossy()) {
@@ -106,9 +114,25 @@ pub fn parse_mp4_files(
 // }
 
 fn plot_parsed_data(data: &(Vec<(f64, f64, f64)>, Vec<f64>)) {
-    crate::analise::gnu_plot_single(&data.1);
     crate::analise::gnu_plot_xyz(&(data.0));
+    crate::analise::gnu_plot_single(&data.1);
 }
+
+fn plot_parsed_analised_base_series(data: &Vec<(f64, f64, f64)>, base_series: &[usize]) {
+    crate::analise::gnu_plot_series(data, base_series);
+}
+
+
+fn input_sma_base() {
+    let mut num = SMA_BASE.lock().unwrap();
+    println!("\ninput base (current {})...\n", &num);
+    let mut input = String::new();
+    std::io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line");
+    *num = input.trim().parse::<usize>().unwrap();
+}
+
 
 
 
@@ -116,29 +140,35 @@ fn plot_parsed_data(data: &(Vec<(f64, f64, f64)>, Vec<f64>)) {
 fn main() {
     let mut config_values = get_config_values();
     config_values = get_cli_merged_config(config_values);
+    loop {
+        let src_files_path_list = match FileDialog::new()
+            .add_filter("mp4", &["mp4", "MP4"])
+            .set_directory(&config_values.srs_dir_path)
+            .pick_files() {
+                Some(file_path_list) => file_path_list,
+                None => {
+                    promptExit!("NO MP4 FILES CHOSEN!");
+                }
+            };
 
-    let src_files_path_list = match FileDialog::new()
-        .add_filter("mp4", &["mp4", "MP4"])
-        .set_directory(&config_values.srs_dir_path)
-        .pick_files() {
-            Some(file_path_list) => file_path_list,
-            None => {
-                promptExit!("NO MP4 FILES CHOSEN!");
+            let parsing_result = parse_mp4_files(&src_files_path_list);
+            for res in parsing_result {
+                match res {
+                    Ok(res_data) => plot_parsed_analised_base_series(
+                        &res_data.xyz,
+                        &[50,100,150,200]
+                    ),
+                    // Ok(res_data) => plot_parsed_data(
+                    //     &(
+                    //         res_data.xyz,
+                    //         res_data.sma,
+                    //     )
+                    // ),
+                    Err(error)  => println!("ERR: {error}"),
+                }
             }
-        };
-
-        let parsing_result = parse_mp4_files(&src_files_path_list);
-        for res in parsing_result {
-            match res {
-                Ok(res_data) => plot_parsed_data(
-                    &(
-                        res_data.xyz,
-                        res_data.sma,
-                    )
-                ),
-                Err(error)  => println!("ERR: {error}"),
-            }
-        }
-    promptExit!("\nEND");
+            
+            input_sma_base();
+    }
 }
 

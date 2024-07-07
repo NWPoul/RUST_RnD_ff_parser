@@ -6,32 +6,35 @@ use gnuplot::{
 
 
 
-
-pub fn get_sma_list(data: &[(f64, f64, f64)], base: usize) -> Vec<f64> {
+pub fn parser_data_to_sma_list(data: &[(f64, f64, f64)], _base: usize) -> (Vec<f64>, Vec<f64>) {
+    let n_base = *crate::SMA_BASE.lock().unwrap();
     let mut sma_vec = vec![0.];
-    // let mut sma_t = vec![0.];
+    let mut sma_t = vec![0.];
 
-    for i in base..data.len() {
-        let cur_data = &data[i - base..i];
+    for i in n_base..data.len() {
+        sma_t.push(i as f64 * 0.005);
+        let cur_data = &data[i - n_base..i];
         let cur_sma_x: f64 = cur_data.iter().map(|(x, _, _)| x).sum();
         let cur_sma_y: f64 = cur_data.iter().map(|(_, y, _)| y).sum();
         let cur_sma_z: f64 = cur_data.iter().map(|(_, _, z)| z).sum();
 
         sma_vec.push(
-            f64::sqrt(cur_sma_x.powi(2) + cur_sma_y.powi(2) + cur_sma_z.powi(2)) / base as f64,
+            f64::sqrt(cur_sma_x.powi(2) + cur_sma_y.powi(2) + cur_sma_z.powi(2)) / n_base as f64,
         );
-        // sma_t.push(i as f64 * 0.005);
     }
 
-    sma_vec
+    (sma_t, sma_vec)
 }
 
-pub fn get_max_vec_data(data: Vec<f64>) -> (f64, f64) {
+pub fn get_max_vec_data(data: &[f64]) -> (f64, f64) {
     let (max_i, max_vec) = data
         .iter()
         .enumerate()
         .max_by(
-            |prev, next| prev.1.partial_cmp(next.1).unwrap_or(std::cmp::Ordering::Greater)
+            |prev, next| 
+                prev.1
+                    .partial_cmp(next.1)
+                    .unwrap_or(std::cmp::Ordering::Greater)
         )
         .unwrap_or((0,&0.));
     ((max_i as f64 * 0.005).round(), *max_vec)
@@ -87,6 +90,32 @@ pub fn gnu_plot_single(data: &[f64]) {
     let mut fg = Figure::new();
     fg.axes2d()
         .lines(&t, &y, &[Color("black")]);
+
+    std::thread::spawn(move || {
+        fg.show().unwrap();
+    });
+}
+
+ 
+
+
+pub fn gnu_plot_series(data: &Vec<(f64, f64, f64)>, base_series: &[usize]) {
+    // let t: Vec<f64> = (0..data.len()).map(
+    //     |i| i as f64 * 0.005
+    // ).collect();
+    
+    let mut sma_series: Vec<(Vec<f64>,Vec<f64>)> = Vec::new(); 
+    
+    for base in base_series {
+        let cur_sma = parser_data_to_sma_list(data, *base);
+        sma_series.push(cur_sma);
+    }
+
+    let mut fg = Figure::new();
+    for sma_data in sma_series.iter() {
+        fg.axes2d()
+           .lines(&sma_data.0, &sma_data.1, &[Color("black")]);
+    }
 
     std::thread::spawn(move || {
         fg.show().unwrap();

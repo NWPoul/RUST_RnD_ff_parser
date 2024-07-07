@@ -7,8 +7,6 @@ use std::sync::{ Arc, atomic::AtomicBool };
 use telemetry_parser::*;
 use telemetry_parser::tags_impl::*;
 
-use crate::analise::get_sma_list;
-
 
 struct Opts {
     input: String,
@@ -29,18 +27,6 @@ pub struct TelemetryParsedData {
     pub cam_info: String,
     pub acc_data: Vec<(f64, f64, f64)>,
 }
-pub struct TelemetryResultAccData {
-    pub xyz: Vec<(f64, f64, f64)>,
-    pub sma: Vec<f64>,
-}
-pub struct TelemetryResultData {
-    pub cam_info: String,
-    pub acc_data: TelemetryResultAccData,
-}
-
-
-
-
 
 
 
@@ -126,15 +112,11 @@ pub fn parse_telemetry_from_mp4_file(input_file: &str) -> Result<TelemetryParsed
     })
 }
 
-pub fn get_result_metadata_for_file(input_file: &str) -> Result<TelemetryResultData, String> {
+pub fn get_result_metadata_for_file(input_file: &str) -> Result<TelemetryParsedData, String> {
     let telemetry_data = parse_telemetry_from_mp4_file(input_file)?;
-    let telemetry_sma_acc_data = get_sma_list(&telemetry_data.acc_data, 200);
-    Ok(TelemetryResultData{
+    Ok(TelemetryParsedData{
         cam_info: telemetry_data.cam_info,
-        acc_data: TelemetryResultAccData{
-            xyz: telemetry_data.acc_data,
-            sma: telemetry_sma_acc_data,
-        }
+        acc_data: telemetry_data.acc_data,
     })
 }
 
