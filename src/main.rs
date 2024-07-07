@@ -111,14 +111,19 @@ fn plot_parsed_analised_base_series(data: &Vec<(f64, f64, f64)>, base_series: &[
 
 
 fn input_sma_base() {
-    let mut num = SMA_BASE.lock().unwrap();
-    println!("\ninput base (current {:?})...\n", &num);
+    let mut base_series = SMA_BASE.lock().unwrap();
+    println!("\ninput base (current {:?})...\n", &base_series);
     let mut input = String::new();
     std::io::stdin()
         .read_line(&mut input)
         .expect("Failed to read line");
-    *num = input.trim()
-        .split_whitespace()
+
+    let input_vec = input.trim().split_whitespace();
+    if input_vec.clone().count() < 2 {
+        return
+    }
+
+    *base_series = input_vec
         .map(
             |s| s.parse::<usize>().unwrap_or(50 as usize)
         )
