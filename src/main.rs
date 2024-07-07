@@ -34,7 +34,7 @@ use telemetry_parser_serv::{get_result_metadata_for_file, TelemetryParsedData};
 
 
 lazy_static! {
-    pub static ref SMA_BASE: Mutex<usize> = Mutex::new(50);
+    pub static ref SMA_BASE: Mutex<Vec<usize>> = Mutex::new(vec![50, 100, 150, 200]);
 }
 
 
@@ -112,12 +112,17 @@ fn plot_parsed_analised_base_series(data: &Vec<(f64, f64, f64)>, base_series: &[
 
 fn input_sma_base() {
     let mut num = SMA_BASE.lock().unwrap();
-    println!("\ninput base (current {})...\n", &num);
+    println!("\ninput base (current {:?})...\n", &num);
     let mut input = String::new();
     std::io::stdin()
         .read_line(&mut input)
         .expect("Failed to read line");
-    *num = input.trim().parse::<usize>().unwrap_or(*num);
+    *num = input.trim()
+        .split_whitespace()
+        .map(
+            |s| s.parse::<usize>().unwrap_or(50 as usize)
+        )
+        .collect::<Vec<usize>>()
 }
 
 
@@ -127,7 +132,9 @@ fn input_sma_base() {
 fn main() {
     let mut config_values = get_config_values();
     config_values = get_cli_merged_config(config_values);
+
     loop {
+        let base_series = SMA_BASE.lock().unwrap().to_owned();
         let src_files_path_list = match FileDialog::new()
             .add_filter("mp4", &["mp4", "MP4"])
             .set_directory(&config_values.srs_dir_path)
@@ -143,7 +150,7 @@ fn main() {
                 match res {
                     Ok(res_data) => plot_parsed_analised_base_series(
                         &res_data.acc_data,
-                        &[50,100,150,200]
+                        &base_series
                     ),
                     Err(error)  => println!("ERR: {error}"),
                 }
