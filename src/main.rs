@@ -20,6 +20,8 @@ mod cli_clonfig;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
+use analise::parser_data_to_sma_list;
+use file_sys_serv::{save_det_log_to_txt, save_sma_log_to_txt};
 use lazy_static::lazy_static;
 
 use rfd::FileDialog;
@@ -49,6 +51,9 @@ const TIME_START_OFFSET  : f64 = -60.0;
 const TIME_END_OFFSET    : f64 = 3.0;
 
 const MIN_ACCEL_TRIGGER  : f64 = 8.0;
+
+pub const PLOT_RAW: bool = false;
+pub const SAVE_LOG: bool = false;
 
 
 configValues!(
@@ -109,6 +114,14 @@ fn plot_parsed_analised_base_series(data: &Vec<(f64, f64, f64)>, base_series: &[
     // crate::plot_serv::gnu_plot_single(&data.1);
 }
 
+fn save_log_data(src_file_path: &PathBuf, res_data: &TelemetryParsedData) {
+    save_det_log_to_txt(&res_data.acc_data, src_file_path);
+    save_sma_log_to_txt(
+        &parser_data_to_sma_list(&res_data.acc_data, 1 as usize),
+        src_file_path,
+    );
+}
+
 
 fn input_sma_base() {
     let mut base_series = SMA_BASE.lock().unwrap();
@@ -153,10 +166,15 @@ fn main() {
             let parsing_result = parse_mp4_files(&src_files_path_list);
             for res in parsing_result {
                 match res {
-                    Ok(res_data) => plot_parsed_analised_base_series(
-                        &res_data.acc_data,
-                        &base_series
-                    ),
+                    Ok(res_data) => {
+                        plot_parsed_analised_base_series(
+                            &res_data.acc_data,
+                            &base_series
+                        );
+                        if SAVE_LOG {
+                            save_log_data(&src_files_path_list[0], &res_data);
+                        };
+                    },
                     Err(error)  => println!("ERR: {error}"),
                 }
             }

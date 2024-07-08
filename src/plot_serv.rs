@@ -8,7 +8,7 @@ use gnuplot::{
 
 use crate::analise::parser_data_to_sma_list;
 
-
+use crate::PLOT_RAW;
 
 
 
@@ -25,7 +25,7 @@ pub fn format_data_for_plot(data: &[f64]) -> (Vec<f64>, Vec<f64>) {
 
 
 
-pub fn gnu_plot_xyz(data: &Vec<(f64, f64, f64)>) {
+fn gnu_get_xyz_data(data: &Vec<(f64, f64, f64)>) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>) {
     let mut t: Vec<f64> = vec![0.0];
     let mut xy: Vec<f64> = Vec::new();
     let mut yy: Vec<f64> = Vec::new();
@@ -38,16 +38,9 @@ pub fn gnu_plot_xyz(data: &Vec<(f64, f64, f64)>) {
         zy.push(tdata.2);
     }
 
-    let mut fg = Figure::new();
-    fg.axes2d()
-        .lines(&t, &xy, &[Color("green")])
-        .lines(&t, &yy, &[Color("red")])
-        .lines(&t, &zy, &[Color("blue")]);
-
-    std::thread::spawn(move || {
-        fg.show().unwrap();
-    });
+   (t, xy, yy, zy)
 }
+
 
 pub fn gnu_plot_single(data: &[f64]) {
     let (t,y) = format_data_for_plot(data);
@@ -72,10 +65,18 @@ pub fn gnu_plot_series(data: &Vec<(f64, f64, f64)>, base_series: &[usize]) {
         sma_series.push((cur_sma.0, cur_sma.1, *base));
     }
 
-    let mut fg = Figure::new();
+    let (raw_t, raw_x, raw_y, raw_z) = gnu_get_xyz_data(data);
+
+    let mut fg: Figure = Figure::new();
     let fg_2d = fg.axes2d();
+    if PLOT_RAW { fg_2d
+        .lines(&raw_t, &raw_x, &[Color("green"), Caption("raw_x"),])
+        .lines(&raw_t, &raw_y, &[Color("red"), Caption("raw_y"),])
+        .lines(&raw_t, &raw_z, &[Color("blue"), Caption("raw_z"),]);
+    }
+
     for sma_data in sma_series.iter() {
-        let label = format!("{} ms", sma_data.2);
+        let label = format!("{} pt", sma_data.2);
         fg_2d.lines(
             &sma_data.0,
             &sma_data.1,

@@ -4,24 +4,22 @@ use std::path::PathBuf;
 
 
 
-pub fn save_log_to_txt(max_accel_data_list: &Vec<(f64, f64, f64, f64)>, file_path: &PathBuf) {
+pub fn save_sma_log_to_txt(sma_data: &(Vec<f64>, Vec<f64>), file_path: &PathBuf) {
     use std::fs::File;
     use std::io::Write;
 
     let srs_file_name = file_path.file_name().unwrap().to_str().unwrap();
-    let log_file_name = format!("max_accel_{}.txt", srs_file_name);
+    let log_file_name = format!("sma_accel_{}.txt", srs_file_name);
 
     let mut file = File::create(log_file_name).expect("Failed to create file");
 
-    for data in max_accel_data_list.iter() {
-        let (sec, acc_data_max, acc_data_skv, acc_data_v_avg) = data;
+    let (t, acc) = sma_data;
+    for (i, cur_t) in t.iter().enumerate() {
         writeln!(
             file,
-            "{:?}\t{:?}\t{:?}\t{:?}",
-            sec.trunc() as u64,
-            acc_data_max.round() as u64,
-            acc_data_skv.round() as u64,
-            acc_data_v_avg.round() as u64
+            "{:?}\t{:?}",
+            cur_t.trunc() as u64,
+            acc[i] as u64,
         )
         .expect("Failed to write to file");
     }
