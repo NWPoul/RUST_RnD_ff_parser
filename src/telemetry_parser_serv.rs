@@ -15,14 +15,6 @@ struct Opts {
 }
 
 
-#[derive(Debug)]
-pub struct GPMFParsedData {
-    pub device_name : String,
-    pub start_time  : f64,
-    pub end_time    : f64,
-    pub max_acc_data: (f64, f64),
-}
-
 pub struct TelemetryParsedData {
     pub cam_info: String,
     pub acc_data: Vec<(f64, f64, f64)>,

@@ -13,7 +13,7 @@ pub mod telemetry_parser_serv;
 pub mod file_sys_serv;
 pub mod plot_serv;
 
-mod cli_clonfig;
+mod cli_config;
 
 
 
@@ -27,16 +27,19 @@ use lazy_static::lazy_static;
 use rfd::FileDialog;
 use config::{Config, File as Cfg_file};
 
-use cli_clonfig::get_cli_merged_config;
+use cli_config::get_cli_merged_config;
 
 
 // use file_sys_serv::get_output_filename;
 use telemetry_parser_serv::{get_result_metadata_for_file, TelemetryParsedData};
 
 
+pub mod analise_log_v;
+
+
 
 lazy_static! {
-    pub static ref SMA_BASE: Mutex<Vec<usize>> = Mutex::new(vec![50, 100, 150, 200]);
+    pub static ref SMA_BASE: Mutex<Vec<usize>> = Mutex::new(vec![300, 301]);
 }
 
 
@@ -44,13 +47,11 @@ lazy_static! {
 
 
 const DEF_DIR    : &str        = ".";
-const DEF_POSTFIX: &str        = "_FFCUT";
-// const DEF_PROMPT_FLIGHT: bool  = false;
 const DEP_TIME_CORRECTION: f64 = 2.0;
-const TIME_START_OFFSET  : f64 = -60.0;
+const TIME_START_OFFSET  : f64 = -3.0;
 const TIME_END_OFFSET    : f64 = 3.0;
 
-const MIN_ACCEL_TRIGGER  : f64 = 8.0;
+const MIN_ACCEL_TRIGGER  : f64 = 20.0;
 
 pub const PLOT_RAW: bool = false;
 pub const SAVE_LOG: bool = false;
@@ -59,8 +60,6 @@ pub const SAVE_LOG: bool = false;
 configValues!(
     ( srs_dir_path       , String , DEF_DIR.to_string() ),
     ( dest_dir_path      , String , DEF_DIR.to_string() ),
-    ( ffmpeg_dir_path    , String , DEF_DIR.to_string() ),
-    ( output_file_postfix, String , DEF_POSTFIX.to_string() ),
     ( dep_time_correction, f64    , DEP_TIME_CORRECTION ),
     ( time_start_offset  , f64    , TIME_START_OFFSET ),
     ( time_end_offset    , f64    , TIME_END_OFFSET ),

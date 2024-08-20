@@ -582,6 +582,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bd0c93bb4b0c6d9b77f4435b0ae98c24d17f1c45b2ff844c6151a07256ca923b"
 
 [[package]]
+name = "dyn-smooth"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47fac87554ece38a037e0d53e750ee5129670b6f97e712bb0c411268181f3700"
+
+[[package]]
 name = "either"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -679,6 +685,24 @@ dependencies = [
  "num-rational",
  "num-traits 0.2.19",
  "thiserror",
+]
+
+[[package]]
+name = "ffmin_parser"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "config",
+ "dyn-smooth",
+ "gnuplot",
+ "lazy_static",
+ "ordered-float",
+ "rfd",
+ "serde 1.0.204",
+ "serde_json",
+ "telemetry_parser",
+ "thiserror",
+ "toml",
 ]
 
 [[package]]
@@ -799,22 +823,6 @@ checksum = "9ce70b22788c02857a6436b96744f9030dd89e17c8482ddf674523c0a1f8ab6c"
 dependencies = [
  "byteorder",
  "tempfile",
-]
-
-[[package]]
-name = "gpmf_parser"
-version = "0.1.0"
-dependencies = [
- "clap",
- "config",
- "gnuplot",
- "lazy_static",
- "rfd",
- "serde 1.0.204",
- "serde_json",
- "telemetry_parser",
- "thiserror",
- "toml",
 ]
 
 [[package]]
@@ -1171,6 +1179,15 @@ name = "once_cell"
 version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
+
+[[package]]
+name = "ordered-float"
+version = "4.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a91171844676f8c7990ce64959210cd2eaef32c2612c50f9fae9f8aaa6065a6"
+dependencies = [
+ "num-traits 0.2.19",
+]
 
 [[package]]
 name = "ordered-stream"

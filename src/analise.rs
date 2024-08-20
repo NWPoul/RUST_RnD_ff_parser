@@ -1,8 +1,29 @@
 
 
+fn ends_with_one(value: usize) -> bool {
+    let value_str = value.to_string();
+    value_str.chars().last() == Some('1')
+}
 
 
 pub fn parser_data_to_sma_list(data: &[(f64, f64, f64)], base: usize) -> (Vec<f64>, Vec<f64>) {
+
+    let sample_rate   : f32 = 200.0;
+    let sensitivity   : f32 = 0.0001;
+
+    let data = if ends_with_one(base) {
+        &crate::analise_log_v::smooth_vector_components(
+            data,
+            sample_rate*((base-1) as f32),
+            sample_rate, 
+            sensitivity,
+        )
+    } else {
+        data
+    };
+
+    let base = if ends_with_one(base) {1} else {base};
+
     let mut sma_vec = vec![0.];
     let mut sma_t = vec![0.];
 
@@ -13,13 +34,13 @@ pub fn parser_data_to_sma_list(data: &[(f64, f64, f64)], base: usize) -> (Vec<f6
         let cur_sma_y: f64 = cur_data.iter().map(|(_, y, _)| y).sum();
         let cur_sma_z: f64 = cur_data.iter().map(|(_, _, z)| z).sum();
 
-        sma_vec.push(
-            f64::sqrt(
-                cur_sma_x.powi(2) +
-                cur_sma_y.powi(2) +
-                cur_sma_z.powi(2)
-            ) / base as f64,
-        );
+        let scalar = f64::sqrt(
+            cur_sma_x.powi(2) +
+            cur_sma_y.powi(2) +
+            cur_sma_z.powi(2)
+        ) / base as f64;
+
+        sma_vec.push(scalar);
     }
 
     (sma_t, sma_vec)
