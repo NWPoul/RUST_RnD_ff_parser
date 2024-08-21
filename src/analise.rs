@@ -7,23 +7,6 @@ fn ends_with_one(value: usize) -> bool {
 
 
 pub fn parser_data_to_sma_list(data: &[(f64, f64, f64)], base: usize) -> (Vec<f64>, Vec<f64>) {
-
-    let sample_rate   : f32 = 200.0;
-    let sensitivity   : f32 = 0.0001;
-
-    let data = if ends_with_one(base) {
-        &crate::analise_log_v::smooth_vector_components(
-            data,
-            sample_rate*((base-1) as f32),
-            sample_rate, 
-            sensitivity,
-        )
-    } else {
-        data
-    };
-
-    let base = if ends_with_one(base) {1} else {base};
-
     let mut sma_vec = vec![0.];
     let mut sma_t = vec![0.];
 

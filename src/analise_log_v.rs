@@ -43,9 +43,6 @@ pub fn smooth_vector_components(
 
 
 
-use ordered_float::OrderedFloat;
-use std::f32::NAN;
-
 pub fn median_filter(rg: &[(f64, f64, f64)], window_size: usize) -> Vec<(f64, f64, f64)> {
     let n = rg.len();
     let half_window = window_size / 2;
@@ -60,7 +57,8 @@ pub fn median_filter(rg: &[(f64, f64, f64)], window_size: usize) -> Vec<(f64, f6
             .into_iter()
             .filter(|&&(x, _, _)| !x.is_nan() && !x.is_infinite())
             .map(|&(x, _, _)| x)
-            .collect::<Vec<f64>>().sort_by(|a, b| a.partial_cmp(b).unwrap());
+            .collect::<Vec<f64>>();
+        sorted_x.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
 
         let median_x = sorted_x[half_window];
@@ -71,8 +69,8 @@ pub fn median_filter(rg: &[(f64, f64, f64)], window_size: usize) -> Vec<(f64, f6
             .filter(|&(_, y, _)| !y.is_nan() && !y.is_infinite())
             .map(|&(_, y, _)| y)
             .collect::<Vec<f64>>();
+        sorted_y.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
-        sorted_y.sort_unstable();
 
         let median_y = sorted_y[half_window];
         result.push((result[result.len()-1].0, median_y, result[result.len()-1].2));
@@ -82,9 +80,8 @@ pub fn median_filter(rg: &[(f64, f64, f64)], window_size: usize) -> Vec<(f64, f6
             .filter(|&(_, _, z)| !z.is_nan() && !z.is_infinite())
             .map(|&(_, _, z)| z)
             .collect::<Vec<f64>>();
-
-        sorted_z.sort_unstable();
-
+        sorted_z.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        
         let median_z = sorted_z[half_window];
         result.push((result[result.len()-1].0, result[result.len()-1].1, median_z));
     }
