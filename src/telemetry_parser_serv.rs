@@ -7,7 +7,6 @@ use std::sync::{ Arc, atomic::AtomicBool };
 use telemetry_parser::*;
 use telemetry_parser::tags_impl::*;
 
-
 struct Opts {
     input: String,
     dump: bool,
@@ -16,8 +15,9 @@ struct Opts {
 
 
 pub struct TelemetryParsedData {
-    pub cam_info: String,
-    pub acc_data: Vec<(f64, f64, f64)>,
+    pub cam_info : String,
+    pub acc_data : Vec<(f64, f64, f64)>,
+    pub gyro_data: Vec<(f64, f64, f64)>,
 }
 
 
@@ -86,29 +86,36 @@ pub fn parse_telemetry_from_mp4_file(input_file: &str) -> Result<TelemetryParsed
 
     let imu_data = match util::normalized_imu(&input, opts.imuo) {
         Ok(data) => data,
-        Err(e) => {return Err(format!("FAIL TO GET IMUDATA! {}", e.to_string()));},
+        Err(e)   => {return Err(format!("FAIL TO GET IMUDATA! {}", e.to_string()));},
     };
 
     let mut telemetry_xyz_acc_data: Vec<(f64, f64, f64)> = Vec::new();
+    let mut telemetry_xyz_gyro_data: Vec<(f64, f64, f64)> = Vec::new();
 
     for v in imu_data {
         if v.accl.is_some() {
             let accl = v.accl.unwrap_or_default();
             telemetry_xyz_acc_data.push((accl[0], accl[1],accl[2]));
         }
+        if v.gyro.is_some() {
+            let gyro = v.gyro.unwrap_or_default();
+            telemetry_xyz_gyro_data.push((gyro[0], gyro[1],gyro[2]));
+        }
     }
 
     Ok(TelemetryParsedData {
-        cam_info: cam_info,
-        acc_data: telemetry_xyz_acc_data,
+        cam_info : cam_info,
+        acc_data : telemetry_xyz_acc_data,
+        gyro_data: telemetry_xyz_gyro_data,
     })
 }
 
 pub fn get_result_metadata_for_file(input_file: &str) -> Result<TelemetryParsedData, String> {
     let telemetry_data = parse_telemetry_from_mp4_file(input_file)?;
     Ok(TelemetryParsedData{
-        cam_info: telemetry_data.cam_info,
-        acc_data: telemetry_data.acc_data,
+        cam_info : telemetry_data.cam_info,
+        acc_data : telemetry_data.acc_data,
+        gyro_data: telemetry_data.gyro_data,
     })
 }
 
