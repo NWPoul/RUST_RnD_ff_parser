@@ -1,14 +1,13 @@
 
 
-fn ends_with_one(value: usize) -> bool {
-    let value_str = value.to_string();
-    value_str.chars().last() == Some('1')
-}
 
 
-pub fn parser_data_to_sma_list(data: &[(f64, f64, f64)], base: usize) -> (Vec<f64>, Vec<f64>) {
-    let mut sma_vec = vec![0.];
+
+pub fn parser_data_to_t_sma_xyz_list(data: &[(f64, f64, f64)], base: usize) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>) {
     let mut sma_t = vec![0.];
+    let mut sma_x_vec = vec![0.];
+    let mut sma_y_vec = vec![0.];
+    let mut sma_z_vec = vec![0.];
 
     for i in base..data.len() {
         sma_t.push(i as f64 * 0.005);
@@ -17,17 +16,36 @@ pub fn parser_data_to_sma_list(data: &[(f64, f64, f64)], base: usize) -> (Vec<f6
         let cur_sma_y: f64 = cur_data.iter().map(|(_, y, _)| y).sum();
         let cur_sma_z: f64 = cur_data.iter().map(|(_, _, z)| z).sum();
 
+        sma_x_vec.push(cur_sma_x / base as f64);
+        sma_y_vec.push(cur_sma_y / base as f64);
+        sma_z_vec.push(cur_sma_z / base as f64);
+    }
+
+    (sma_t, sma_x_vec, sma_y_vec, sma_z_vec)
+}
+
+
+pub fn parser_data_to_sma_list(data: &[(f64, f64, f64)], base: usize) -> (Vec<f64>, Vec<f64>) {
+    let mut sma_t   = vec![0.];
+    let mut sma_vec = vec![0.];
+
+    let t_smaxyz =  parser_data_to_t_sma_xyz_list(data, base);
+
+    for (i, t) in t_smaxyz.0.iter().enumerate() {
+        sma_t.push(*t);
+
         let scalar = f64::sqrt(
-            cur_sma_x.powi(2) +
-            cur_sma_y.powi(2) +
-            cur_sma_z.powi(2)
-        ) / base as f64;
+            t_smaxyz.1[i].powi(2) +
+            t_smaxyz.2[i].powi(2) +
+            t_smaxyz.3[i].powi(2)
+        );
 
         sma_vec.push(scalar);
     }
 
     (sma_t, sma_vec)
 }
+
 
 pub fn get_max_vec_data(t_acc_data: &(Vec<f64>, Vec<f64>)) -> (f64, f64) {
     let (max_i, max_vec) = t_acc_data.1

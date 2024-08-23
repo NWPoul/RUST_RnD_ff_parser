@@ -53,7 +53,7 @@ const TIME_END_OFFSET    : f64 = 3.0;
 
 const MIN_ACCEL_TRIGGER  : f64 = 20.0;
 
-pub const PLOT_RAW: bool = true;
+pub const PLOT_RAW: bool = false;
 pub const SAVE_LOG: bool = false;
 
 
@@ -167,8 +167,8 @@ fn main() {
                 match res {
                     Ok(res_data) => {
                         plot_parsed_analised_base_series(
-                            // &res_data.acc_data,
-                            &res_data.gyro_data,
+                            &res_data.acc_data,
+                            // &res_data.gyro_data,
                             &base_series
                         );
                         if SAVE_LOG {

@@ -43,3 +43,10 @@ impl Vector {
         cos_theta.acos()
     }
 }
+
+
+
+pub fn ends_with_one(value: usize) -> bool {
+    let value_str = value.to_string();
+    value_str.chars().last() == Some('1')
+}
