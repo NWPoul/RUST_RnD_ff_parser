@@ -54,7 +54,7 @@ const TIME_END_OFFSET    : f64 = 3.0;
 
 const MIN_ACCEL_TRIGGER  : f64 = 20.0;
 
-pub const PLOT_RAW: bool = false;
+pub const PLOT_RAW: bool = true;
 pub const SAVE_LOG: bool = false;
 
 
