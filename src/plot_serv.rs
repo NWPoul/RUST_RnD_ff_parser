@@ -57,9 +57,9 @@ pub fn gnu_plot_series(data: &[Vector3d], base_series: &[usize]) {
     if PLOT_RAW {
         for smaxyz_data in smaxyz_series.iter() {
             let label = format!("{} pt", smaxyz_data.2);
-            let x_data = &smaxyz_data.1.iter().map(|vector| vector.x).collect::<Vec<f64>>();
-            let y_data = &smaxyz_data.1.iter().map(|vector| vector.y).collect::<Vec<f64>>();
-            let z_data = &smaxyz_data.1.iter().map(|vector| vector.z).collect::<Vec<f64>>();
+            let x_data: Vec<f64> = smaxyz_data.1.iter().map(|vector| vector.x).collect();
+            let y_data: Vec<f64> = smaxyz_data.1.iter().map(|vector| vector.y).collect();
+            let z_data: Vec<f64> = smaxyz_data.1.iter().map(|vector| vector.z).collect();
             fg_2d
                 .lines(&smaxyz_data.0, x_data, &[Color("green"), Caption(&format!("raw_x {}",  &label))])
                 .lines(&smaxyz_data.0, y_data, &[Color("red")  , Caption(&format!("raw_y {}",  &label))])
