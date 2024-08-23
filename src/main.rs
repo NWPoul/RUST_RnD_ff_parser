@@ -32,6 +32,7 @@ use cli_config::get_cli_merged_config;
 
 // use file_sys_serv::get_output_filename;
 use telemetry_parser_serv::{get_result_metadata_for_file, TelemetryParsedData};
+use utils::u_serv::Vector3d;
 
 
 pub mod analise_log_v;
@@ -107,7 +108,7 @@ pub fn parse_mp4_files(
 
 
 
-fn plot_parsed_analised_base_series(data: &Vec<(f64, f64, f64)>, base_series: &[usize]) {
+fn plot_parsed_analised_base_series(data: &[Vector3d], base_series: &[usize]) {
     crate::plot_serv::gnu_plot_series(data, base_series);
 
     // crate::plot_serv::gnu_plot_single(&data.1);

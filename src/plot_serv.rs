@@ -8,6 +8,7 @@ use gnuplot::{
 
 use crate::analise::{parser_data_to_sma_list, parser_data_to_t_sma_xyz_list};
 
+use crate::utils::u_serv::Vector3d;
 use crate::PLOT_RAW;
 
 
@@ -61,7 +62,7 @@ pub fn gnu_plot_single(data: &[f64]) {
 
 
 
-pub fn gnu_plot_series(data: &Vec<(f64, f64, f64)>, base_series: &[usize]) {
+pub fn gnu_plot_series(data: &[Vector3d], base_series: &[usize]) {
     let mut sma_series   : Vec<(Vec<f64>,Vec<f64>, usize)> = Vec::new();
     let mut smaxyz_series: Vec<(Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>, usize)> = Vec::new();
 

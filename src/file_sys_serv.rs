@@ -1,6 +1,8 @@
 use std::fs;
 use std::path::PathBuf;
 
+use crate::utils::u_serv::Vector3d;
+
 
 
 
@@ -25,7 +27,7 @@ pub fn save_sma_log_to_txt(sma_data: &(Vec<f64>, Vec<f64>), file_path: &PathBuf)
     }
 }
 
-pub fn save_det_log_to_txt(data_list: &Vec<(f64,f64,f64)>, file_path: &PathBuf) {
+pub fn save_det_log_to_txt(vector_list: &[Vector3d], file_path: &PathBuf) {
     use std::fs::File;
     use std::io::Write;
 
@@ -34,10 +36,10 @@ pub fn save_det_log_to_txt(data_list: &Vec<(f64,f64,f64)>, file_path: &PathBuf) 
 
     let mut file = File::create(log_file_name).expect("Failed to create file");
 
-    for data in data_list.iter() {
+    for vector in vector_list {
         writeln!(
             file,
-            "{:?}\t{:?}\t{:?}\t", data.0, data.1, data.2)
+            "{:?}\t{:?}\t{:?}\t", vector.x, vector.y, vector.z)
             .expect("Failed to write to file");
     }
 }
