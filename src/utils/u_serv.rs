@@ -29,7 +29,7 @@ pub struct Vector3d {
     pub y: f64,
     pub z: f64,
 }
-pub enum Vector3dIndex {
+pub enum Index3D {
     X,
     Y,
     Z,
@@ -41,11 +41,11 @@ impl Vector3d {
         Self { x, y, z }
     }
 
-    pub fn get_axis_val_by_index(&self, i: &Vector3dIndex) -> f64 {
+    pub fn get_axis_val_by_index(&self, i: &Index3D) -> f64 {
         match i {
-            Vector3dIndex::X => self.x,
-            Vector3dIndex::Y => self.y,
-            Vector3dIndex::Z => self.z,
+            Index3D::X => self.x,
+            Index3D::Y => self.y,
+            Index3D::Z => self.z,
             // _ => panic!("index can be only 0, 1, 2")
         }
     }
