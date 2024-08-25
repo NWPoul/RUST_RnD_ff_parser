@@ -63,6 +63,10 @@ impl Vector3d {
         f64::sqrt(self.x.powi(2) + self.y.powi(2) + self.z.powi(2))
     }
 
+    pub fn plain_sum(&self) -> f64 {
+        self.x + self.y + self.z
+    }
+
     pub fn dot_product(a: &Vector3d,
         b: &Vector3d) -> f64 {
         a.x * b.x + a.y * b.y + a.z * b.z

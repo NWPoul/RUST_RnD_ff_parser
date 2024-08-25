@@ -21,7 +21,7 @@ pub fn parser_data_to_t_sma_xyz_list(data: &[Vector3d], base: usize) -> (Vec<f64
         sma_vec_list.push( Vector3d::new(cur_sma_x, cur_sma_y, cur_sma_z) )
     }
 
-    (sma_t, sma_vec_list)
+    abs_sma_xyz(sma_t, sma_vec_list)
 }
 
 
@@ -29,11 +29,12 @@ pub fn parser_data_to_sma_list(data: &[Vector3d], base: usize) -> (Vec<f64>, Vec
     let mut sma_t   =  Vec::new();
     let mut sma_vec =  Vec::new();
 
-    let t_smaxyz =  parser_data_to_t_sma_xyz_list(data, base);
+    let t_smaxyz = parser_data_to_t_sma_xyz_list(data, base);
 
     for (i, t) in t_smaxyz.0.iter().enumerate() {
         sma_t.push(*t);
-        sma_vec.push(t_smaxyz.1[i].magnitude());
+        // sma_vec.push(t_smaxyz.1[i].magnitude());
+        sma_vec.push(t_smaxyz.1[i].plain_sum());
     }
 
     (sma_t, sma_vec)
@@ -44,7 +45,6 @@ pub fn parser_data_to_sma_list(data: &[Vector3d], base: usize) -> (Vec<f64>, Vec
 //     // if t_data.len() != acc_data.len() {panic!("time and acc slice must be same length!")};
 //     let mut t =  vec![0.];
 //     let mut v =  vec![v0];
-
 //     for (i, t) in data.iter().enumerate() {
 //         v.push(*t);
 //         sma_vec.push(t_smaxyz.1[i].magnitude());
@@ -52,6 +52,14 @@ pub fn parser_data_to_sma_list(data: &[Vector3d], base: usize) -> (Vec<f64>, Vec
 
 
 // }
+
+pub fn abs_sma_xyz(t: Vec<f64>, sma_xyz_data: Vec<Vector3d>) -> (Vec<f64>, Vec<Vector3d>) {
+    // let mut abs_sma_xyz:Vec<Vector3d> =  Vec::new();
+    let abs_sma_xyz =  sma_xyz_data.iter().map(
+        |vector| vector.apply_for_all_axis(  f64::abs  )
+    ).collect();
+    (t, abs_sma_xyz)
+}
 
 
 pub fn get_max_vec_data(t_acc_data: &(Vec<f64>, Vec<f64>)) -> (f64, f64) {
