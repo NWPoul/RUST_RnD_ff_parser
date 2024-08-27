@@ -1,4 +1,5 @@
 
+use std::ops::{Add, Div};
 
 use gnuplot::{
     Figure,
@@ -14,20 +15,20 @@ use crate::PLOT_RAW;
 
 
 
-pub fn format_data_for_plot(data: &[f64]) -> (Vec<f64>, Vec<f64>) {
+pub fn format_data_for_plot<T: Into<f64> + Add<Output=T> + Div<Output=T> + Copy>(data: &[T], tick: &f64) -> (Vec<f64>, Vec<f64>) {
     let mut t: Vec<f64> = vec![0.0];
-    let mut y = Vec::new();
+    let mut y: Vec<f64> = Vec::new();
 
     for (i, tdata) in data.iter().enumerate() {
-        t.push(i as f64 * 0.005);
-        y.push(*tdata);
+        t.push(i as f64 * tick);
+        y.push((*tdata).clone().into());
     }
     (t, y)
 }
 
 
-pub fn gnu_plot_single(data: &[f64]) {
-    let (t,y) = format_data_for_plot(data);
+pub fn gnu_plot_single<T: Into<f64> + Add<Output=T> + Div<Output=T> + Copy>(data: &[T], tick: &f64) {
+    let (t,y) = format_data_for_plot(data, tick);
 
     let mut fg = Figure::new();
     fg.axes2d()

@@ -40,7 +40,7 @@ pub mod analise_log_v;
 
 
 lazy_static! {
-    pub static ref SMA_BASE: Mutex<Vec<usize>> = Mutex::new(vec![300, 301]);
+    pub static ref SMA_BASE: Mutex<Vec<usize>> = Mutex::new(vec![50]);
 }
 
 
@@ -113,6 +113,11 @@ fn plot_parsed_analised_base_series(data: &[Vector3d], base_series: &[usize]) {
 
     // crate::plot_serv::gnu_plot_single(&data.1);
 }
+fn plot_parsed_iso_series(data: &[u32]) {
+    crate::plot_serv::gnu_plot_single(data, &telemetry_parser_serv::DEF_TICK);
+
+    // crate::plot_serv::gnu_plot_single(&data.1);
+}
 
 fn save_log_data(src_file_path: &PathBuf, res_data: &TelemetryParsedData) {
     save_det_log_to_txt(&res_data.acc_data, src_file_path);
@@ -167,10 +172,14 @@ fn main() {
             for res in parsing_result {
                 match res {
                     Ok(res_data) => {
-                        plot_parsed_analised_base_series(
-                            &res_data.acc_data,
-                            // &res_data.gyro_data,
-                            &base_series
+                        // plot_parsed_analised_base_series(
+                        //     &res_data.acc_data,
+                        //     // &res_data.gyro_data,
+                        //     &base_series
+                        // );
+                        plot_serv::gnu_plot_single(
+                            &res_data.iso_data.vals,
+                            &res_data.iso_data.tick,
                         );
                         if SAVE_LOG {
                             save_log_data(&src_files_path_list[0], &res_data);

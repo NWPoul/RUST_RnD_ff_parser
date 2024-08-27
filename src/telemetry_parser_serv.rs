@@ -3,11 +3,16 @@
 
 // use std::time::Instant;
 use std::sync::{ Arc, atomic::AtomicBool };
+use std::ops::{Add, Div};
 
 use telemetry_parser::*;
 use telemetry_parser::tags_impl::*;
 
 use crate::utils::u_serv::Vector3d;
+
+
+pub trait NumericData: Into<f64> + Add<Output=Self> + Div<Output=Self> + Copy {}
+impl<T> NumericData for T where T: Into<f64> + Add<Output=T> + Div<Output=T> + Copy {}
 
 struct Opts {
     input: String,
@@ -15,14 +20,20 @@ struct Opts {
     imuo: Option<String>,
 }
 
-
+pub struct iso_data {
+    pub tick: f64,
+    pub vals: Vec<f64>,
+}
 pub struct TelemetryParsedData {
     pub cam_info : String,
     pub acc_data : Vec<Vector3d>,
     pub gyro_data: Vec<Vector3d>,
+    pub iso_data : iso_data,
 }
 
 
+
+pub const DEF_TICK: f64 = 0.005;
 
 
 
@@ -86,7 +97,7 @@ pub fn parse_telemetry_from_mp4_file(input_file: &str) -> Result<TelemetryParsed
         Some(samples_ref) => samples_ref,
         None => {return Err(format!("NO_SAMPLES!"))},
     };
-    get_iso_data(&samples);
+    let iso_data = get_iso_data(&input);
 
     if opts.dump { dump_samples(samples)}
 
@@ -113,6 +124,7 @@ pub fn parse_telemetry_from_mp4_file(input_file: &str) -> Result<TelemetryParsed
         cam_info : cam_info,
         acc_data : telemetry_xyz_acc_data,
         gyro_data: telemetry_xyz_gyro_data,
+        iso_data : iso_data.expect("msg"),
     })
 }
 
@@ -121,7 +133,9 @@ pub fn get_result_metadata_for_file(input_file: &str) -> Result<TelemetryParsedD
     Ok(TelemetryParsedData{
         cam_info : telemetry_data.cam_info,
         acc_data : telemetry_data.acc_data,
+        
         gyro_data: telemetry_data.gyro_data,
+        iso_data : telemetry_data.iso_data,
     })
 }
 
@@ -131,42 +145,149 @@ pub fn get_result_metadata_for_file(input_file: &str) -> Result<TelemetryParsedD
 
 
 
-pub fn get_iso_data(samples: &Vec<util::SampleInfo>) {
-    for info in samples {
-        if info.tag_map.is_none() { continue; }
+pub fn get_iso_data(input: &Input) -> std::io::Result<iso_data> {
+    // let mut timestamp = 0f64;
+    // let accurate_ts = input.has_accurate_timestamps();
 
-        let grouped_tag_map = info.tag_map.as_ref().unwrap();
+    let mut final_data_vals = Vec::<f64>::with_capacity(10000);
+    let mut final_data = iso_data{
+        vals: final_data_vals,
+        tick: DEF_TICK,
+    };
 
-        for (group, map) in grouped_tag_map {
-            if group == &GroupId::Exposure {
-                // dbg!(map.get(&TagId::Data));
-            };
-            if group == &GroupId::Custom("SensorISO".to_string()) {
-                if let Some(taginfo) = map.get(&TagId::Data) {
-                    match &taginfo.value {
-                        // Sony and GoPro
-                        TagValue:: arr) => {
-                            let arr = arr.get();
-                            let reading_duration = info.duration_ms / arr.len() as f64;
-                            fix_timestamps = true;
+    if let Some(ref samples) = input.samples {
+        for info in samples {
+            if info.tag_map.is_none() { continue; }
+            let duration = info.duration_ms;
 
-                            for (j, v) in arr.iter().enumerate() {
-                                if final_data.len() <= data_index + j {
-                                    final_data.resize_with(data_index + j + 1, Default::default);
-                                    final_data[data_index + j].timestamp_ms = timestamp;
-                                    timestamp += reading_duration;
-                                }
-                                let itm = v.clone().into_scaled(&raw2unit, &unit2deg).orient(io);
-                                     if group == &GroupId::Gyroscope     { final_data[data_index + j].gyro = Some([ itm.x, itm.y, itm.z ]); }
-                                else if group == &GroupId::Accelerometer { final_data[data_index + j].accl = Some([ itm.x, itm.y, itm.z ]); }
-                                else if group == &GroupId::Magnetometer  { final_data[data_index + j].magn = Some([ itm.x, itm.y, itm.z ]); }
+            let grouped_tag_map = info.tag_map.as_ref().unwrap();
+
+
+
+
+
+
+
+            fn convert_array_to_f64<T>(arr: &[T]) -> Vec<f64>
+            where T: Into<f64>{
+                arr.iter().map(|x| *x as f64).collect()
+            }
+            
+            fn perform_operations(arr: Vec<f64>) {
+                // Perform identical operations on arr here
+                let tick = 30. / arr.len() as f64;
+                
+                // You can add more operations here if needed
+            }
+
+
+
+
+
+
+
+            for (group, map) in grouped_tag_map {
+                if group == &GroupId::Custom("SensorISO".to_string()) {
+                    if let Some(taginfo) = map.get(&TagId::Data) {
+                        // match &taginfo.value {
+                        // // dbg!(&taginfo.value);
+                        //     // Sony and GoPro
+                        //     TagValue::Vec_u32(arr) => {
+                        //         let arr:Vec<f64> = arr.get().into_iter().map(|x| *x as f64).collect();
+                        //         let tick = duration / arr.len() as f64;
+                        //         // dbg!(tick);
+                        //         // final_data.vals.extend(arr);
+                        //         // final_data.tick = tick;
+                        //     },
+                        //     TagValue::Vec_u16(arr) => {
+                        //         let arr:Vec<f64> = arr.get().into_iter().map(|x| *x as f64).collect();
+                        //         let tick = duration / arr.len() as f64;
+                        //         // dbg!(tick);
+                        //         // final_data.vals.extend(arr);
+                        //         // final_data.tick = tick;
+                                
+
+                        //     },
+                            
+                        //     _ => {
+                        //         dbg!("NOT Vec_u32!!! {}", &taginfo.value);
+                        //         ()
+                        //     }
+                        // }
+                        match &taginfo.value {
+                            TagValue::Vec_u32(arr) | TagValue::Vec_u16(arr) => {
+                                let converted_arr = convert_array_to_f64(arr);
+                                perform_operations(converted_arr);
                             }
-                        },
-                        _ => dbg!()
+                            _ => {
+                                dbg!("NOT Vec_u32 or u16!!! {}", &taginfo.value);
+                                ()
+                            }
+                        }
+                    }
+                }
+                if group == &GroupId::Exposure {
+                    if let Some(taginfo) = map.get(&TagId::Data) {
+                        dbg!("EXPOSURE {}");//, &taginfo.value);
+                        match &taginfo.value {
+                            // Sony and GoPro
+                            TagValue::Vec_f32(arr) => {
+                                let arr:Vec<f64> = arr.get().into_iter().map(|x| *x as f64).collect();
+                                let tick = duration / arr.len() as f64;
+                                dbg!(tick, &arr);
+                                final_data.vals.extend(arr);
+                                final_data.tick = tick;
+                            },
+                           
+                            _ => {
+                                dbg!("EXPOSURE NOT Vec_u32!!! {}", &taginfo.value);
+                                ()
+                            }
+                        }
                     }
                 }
             }
         }
     }
+    Ok(final_data)
 }
-// let telemetry_sma_acc_data = get_sma_list(&telemetry_xyz_acc_data, 100);
+
+
+//      let mut timestamp = 0f64;
+//     let mut first_timestamp = None;
+//     let accurate_ts = input.has_accurate_timestamps();
+
+//     let mut final_data = Vec::<IMUData>::with_capacity(10000);
+//     let mut data_index = 0;
+
+//     let mut fix_timestamps = false;
+
+//     for info in samples {
+//         if info.tag_map.is_none() { continue; }
+
+//         let grouped_tag_map = info.tag_map.as_ref().unwrap();
+
+//         for (group, map) in grouped_tag_map {
+//             if group == &GroupId::Exposure {
+//                 // dbg!(map.get(&TagId::Data));
+//             };
+//             if group == &GroupId::Custom("SensorISO".to_string()) {
+//                 if let Some(taginfo) = map.get(&TagId::Data) {
+//                     match &taginfo.value {
+//                         TagValue::Vec_Vec_i16(arr) => {
+//                             let arr = arr.get();
+
+
+macro_rules! try_block {
+    ($type:ty, $body:block) => {
+        (|| -> Option<$type> {
+            Some($body)
+        }())
+    };
+    ($body:block) => {
+        (|| -> Option<()> {
+            $body
+            Some(())
+        }())
+    };
+}
