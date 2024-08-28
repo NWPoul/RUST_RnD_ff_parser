@@ -3,8 +3,24 @@ use crate::utils::u_serv::{Vector3d, Index3D};
 
 
 
-fn calc_sma_for_axis(data_slice: &[Vector3d], axis: &Index3D, base: usize) -> f64 {
-    data_slice.iter().map(|vec| vec.get_axis_val_by_index(axis)).sum::<f64>() / base as f64
+fn calc_sma_value(data_slice: &[f64]) -> f64 {
+    let base = data_slice.len() as f64;
+    data_slice.iter().sum::<f64>() / base
+}
+pub fn data_to_sma(data: &[f64], base: usize) -> Vec<f64> {
+    let mut sma_vec_list:Vec<f64> = Vec::new();
+
+    for i in base..data.len() {
+        let cur_data = &data[i - base..i];
+        sma_vec_list.push( calc_sma_value(cur_data) )
+    }
+    sma_vec_list
+}
+
+
+fn calc_sma_for_axis(data_slice: &[Vector3d], axis: &Index3D) -> f64 {
+    let base = data_slice.len() as f64;
+    data_slice.iter().map(|vec| vec.get_axis_val_by_index(axis)).sum::<f64>() / base
 }
 
 pub fn parser_data_to_t_sma_xyz_list(data: &[Vector3d], base: usize) -> (Vec<f64>, Vec<Vector3d>) {
@@ -14,9 +30,9 @@ pub fn parser_data_to_t_sma_xyz_list(data: &[Vector3d], base: usize) -> (Vec<f64
     for i in base..data.len() {
         sma_t.push(i as f64 * 0.005);
         let cur_data = &data[i - base..i];
-        let cur_sma_x = calc_sma_for_axis(cur_data, &Index3D::X, base);
-        let cur_sma_y = calc_sma_for_axis(cur_data, &Index3D::Y, base);
-        let cur_sma_z = calc_sma_for_axis(cur_data, &Index3D::Z, base);
+        let cur_sma_x = calc_sma_for_axis(cur_data, &Index3D::X);
+        let cur_sma_y = calc_sma_for_axis(cur_data, &Index3D::Y);
+        let cur_sma_z = calc_sma_for_axis(cur_data, &Index3D::Z);
 
         sma_vec_list.push( Vector3d::new(cur_sma_x, cur_sma_y, cur_sma_z) )
     }

@@ -58,7 +58,6 @@ impl Vector3d {
         }
     }
 
-
     pub fn magnitude(&self) -> f64 {
         f64::sqrt(self.x.powi(2) + self.y.powi(2) + self.z.powi(2))
     }
@@ -67,14 +66,16 @@ impl Vector3d {
         self.x + self.y + self.z
     }
 
-    pub fn dot_product(a: &Vector3d,
-        b: &Vector3d) -> f64 {
+    pub fn dot_product(a: &Self, b: &Self) -> f64 {
         a.x * b.x + a.y * b.y + a.z * b.z
     }
 
-    pub fn angle_between(a: &Vector3d, b: &Vector3d) -> f64 {
-        let cos_theta = Self::dot_product(a, b) / (a.magnitude() * b.magnitude());
-        cos_theta.acos()
+    pub fn substract(&self, sub: &Self) -> Self {
+        Self {
+            x: self.x - sub.x,
+            y: self.y - sub.y,
+            z: self.z - sub.z,
+        }
     }
 }
 
