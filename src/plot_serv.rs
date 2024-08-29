@@ -7,7 +7,9 @@ use gnuplot::{
 
 
 use crate::utils::u_serv::Vector3d;
-use crate::analise::{data_to_sma, parser_data_to_sma_list, parser_data_to_t_sma_xyz_list};
+use crate::analise::{
+    data_to_sma_spread_data, v3d_list_to_magnitude_sma_list, v3d_list_to_magnitude_smaspr_list, v3d_list_to_plainsum_sma_list, v3d_list_to_ts_sma_v3d_list
+};
 
 use crate::PLOT_RAW;
 
@@ -43,28 +45,34 @@ pub fn gnu_plot_single<T: Into<f64> + Add<Output=T> + Div<Output=T> + Copy>(data
 }
 
 pub fn gnu_plot_single_sma(data: &[f64], tick: &f64, base: usize, title: &str) {
-    let data = data_to_sma(data.into(), base);
-    gnu_plot_single(&data, tick, title);
+    let stat_data = data_to_sma_spread_data(data.into(), base);
+    gnu_plot_single(&stat_data.0, tick, title);
+}
+pub fn gnu_plot_single_spr(data: &[f64], tick: &f64, base: usize, title: &str) {
+    let stat_data = data_to_sma_spread_data(data.into(), base);
+    gnu_plot_single(&stat_data.1, tick, title);
 }
 
 
+pub fn gnu_plot_series(data: &[Vector3d], series_props: &[usize]) {
+    let mut sma_magnitude_series: Vec<(Vec<f64>, Vec<f64>     , usize)> = Vec::new();
+    let mut sma_plainsum_series : Vec<(Vec<f64>, Vec<f64>     , usize)> = Vec::new();
+    let mut sma_raw_series      : Vec<(Vec<f64>, Vec<Vector3d>, usize)> = Vec::new();
 
-pub fn gnu_plot_series(data: &[Vector3d], base_series: &[usize]) {
-    let mut sma_series   : Vec<(Vec<f64>, Vec<f64>     , usize)> = Vec::new();
-    let mut smaxyz_series: Vec<(Vec<f64>, Vec<Vector3d>, usize)> = Vec::new();
-
-    for base in base_series {
-        let cur_sma = parser_data_to_sma_list(data, *base);
-        let cur_smaxyz = parser_data_to_t_sma_xyz_list(data, *base);
-        sma_series.push((cur_sma.0, cur_sma.1, *base));
-        smaxyz_series.push((cur_smaxyz.0, cur_smaxyz.1, *base));
+    for base in series_props {
+        let cur_magnitude_sma = v3d_list_to_magnitude_sma_list(data, *base);
+        let cur_plainsum_sma  = v3d_list_to_plainsum_sma_list(data, *base);
+        let cur_v3d_sma       = v3d_list_to_ts_sma_v3d_list(data, *base);
+        sma_magnitude_series.push((cur_magnitude_sma.0, cur_magnitude_sma.1, *base));
+        sma_plainsum_series.push((cur_plainsum_sma.0, cur_plainsum_sma.1, *base));
+        sma_raw_series.push((cur_v3d_sma.0, cur_v3d_sma.1, *base));
     }
 
     let mut fg: Figure = Figure::new();
     let fg_2d = fg.axes2d();
     
     if PLOT_RAW {
-        for smaxyz_data in smaxyz_series.iter() {
+        for smaxyz_data in sma_raw_series.iter() {
             let label = format!("{} pt", smaxyz_data.2);
             let x_data: Vec<f64> = smaxyz_data.1.iter().map(|vector| vector.x).collect();
             let y_data: Vec<f64> = smaxyz_data.1.iter().map(|vector| vector.y).collect();
@@ -76,7 +84,7 @@ pub fn gnu_plot_series(data: &[Vector3d], base_series: &[usize]) {
         }
     }
 
-    for sma_data in sma_series.iter() {
+    for sma_data in sma_magnitude_series.iter() {
         let label = format!("{} pt", sma_data.2);
         fg_2d.lines(
             &sma_data.0,
@@ -84,6 +92,59 @@ pub fn gnu_plot_series(data: &[Vector3d], base_series: &[usize]) {
             &[
                 Caption(&label),
                 Color("black"),
+            ]
+        );
+    }
+    for sma_data in sma_plainsum_series.iter() {
+        let label = format!("{} pt", sma_data.2);
+        fg_2d.lines(
+            &sma_data.0,
+            &sma_data.1,
+            &[
+                Caption(&label),
+                Color("black"),
+            ]
+        );
+    }
+
+    std::thread::spawn(move || {
+        fg.show().unwrap();
+    });
+}
+
+
+pub fn gnu_plot_stats_for_data(data: &[Vector3d], base_series: &[usize]) {
+    let mut sma_magnitude_series: Vec<(Vec<f64>, Vec<f64>, usize)> = Vec::new();
+    let mut spr_magnitude_series: Vec<(Vec<f64>, Vec<f64>, usize)> = Vec::new();
+
+    for base in base_series {
+        let cur_stats = v3d_list_to_magnitude_smaspr_list(data, *base);
+        sma_magnitude_series.push((cur_stats.0.clone(), cur_stats.1, *base));
+        spr_magnitude_series.push((cur_stats.0, cur_stats.2, *base));
+    }
+
+    let mut fg: Figure = Figure::new();
+    let fg_2d = fg.axes2d();
+
+    for sma_data in sma_magnitude_series.iter() {
+        let label = format!("{} pt", sma_data.2);
+        fg_2d.lines(
+            &sma_data.0,
+            &sma_data.1,
+            &[
+                Caption(&label),
+                Color("black"),
+            ]
+        );
+    }
+    for spr_data in spr_magnitude_series.iter() {
+        let label = format!("{} pt", spr_data.2);
+        fg_2d.lines(
+            &spr_data.0,
+            &spr_data.1,
+            &[
+                Caption(&label),
+                Color("brown"),
             ]
         );
     }

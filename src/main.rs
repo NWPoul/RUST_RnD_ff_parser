@@ -20,11 +20,11 @@ mod cli_config;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use analise::parser_data_to_sma_list;
+use analise::v3d_list_to_magnitude_sma_list;
 use file_sys_serv::{save_det_log_to_txt, save_sma_log_to_txt};
 use lazy_static::lazy_static;
 
-use plot_serv::{gnu_plot_series, gnu_plot_single};
+use plot_serv::{gnu_plot_series, gnu_plot_single, gnu_plot_single_spr, gnu_plot_stats_for_data};
 use rfd::FileDialog;
 use config::{Config, File as Cfg_file};
 
@@ -112,6 +112,7 @@ pub fn parse_mp4_files(
 fn plot_parsed_analised_base_series(data: &[Vector3d], base_series: &[usize]) {
     gnu_plot_series(data, base_series);
 }
+
 fn plot_parsed_iso_series(data: &[u32], title: &str) {
     gnu_plot_single(data, &telemetry_parser_serv::DEF_TICK, title);
 }
@@ -119,7 +120,7 @@ fn plot_parsed_iso_series(data: &[u32], title: &str) {
 fn save_log_data(src_file_path: &PathBuf, res_data: &TelemetryParsedData) {
     save_det_log_to_txt(&res_data.acc_data, src_file_path);
     save_sma_log_to_txt(
-        &parser_data_to_sma_list(&res_data.acc_data, 1 as usize),
+        &v3d_list_to_magnitude_sma_list(&res_data.acc_data, 1 as usize),
         src_file_path,
     );
 }
@@ -134,7 +135,7 @@ fn input_sma_base() {
         .expect("Failed to read line");
 
     let input_vec = input.trim().split_whitespace();
-    if input_vec.clone().count() < 2 {
+    if input_vec.clone().count() < 1 {
         return
     }
 
@@ -169,20 +170,24 @@ fn main() {
             for res in parsing_result {
                 match res {
                     Ok(res_data) => {
-                        // plot_parsed_analised_base_series(
-                        //     &res_data.acc_data,
-                        //     &base_series,
+                        plot_parsed_analised_base_series(
+                            &res_data.acc_data,
+                            &base_series,
+                        );
+                        gnu_plot_stats_for_data(
+                            &res_data.acc_data,
+                            &base_series,
+                        );
+                        // plot_serv::gnu_plot_ts_data(
+                        //     &res_data.iso_data.0.ts,
+                        //     &res_data.iso_data.0.vals,
+                        //     &res_data.file_name,
                         // );
-                        plot_serv::gnu_plot_ts_data(
-                            &res_data.iso_data.0.ts,
-                            &res_data.iso_data.0.vals,
-                            &res_data.file_name,
-                        );
-                        plot_serv::gnu_plot_ts_data(
-                            &res_data.iso_data.1.ts,
-                            &res_data.iso_data.1.vals,
-                            &res_data.file_name,
-                        );
+                        // plot_serv::gnu_plot_ts_data(
+                        //     &res_data.iso_data.1.ts,
+                        //     &res_data.iso_data.1.vals,
+                        //     &res_data.file_name,
+                        // );
                         if SAVE_LOG {
                             save_log_data(&src_files_path_list[0], &res_data);
                         };
