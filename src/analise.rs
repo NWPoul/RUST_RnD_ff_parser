@@ -93,17 +93,20 @@ pub fn v3d_list_to_plainsum_sma_list(data: &[Vector3d], base: usize) -> (Vec<f64
     (sma_t, sma_vec)
 }
 
-// pub fn calc_velocity_arr(data: &[Vector3d], v0: f64) -> Vec<Vector3d>{
-//     // if t_data.len() != acc_data.len() {panic!("time and acc slice must be same length!")};
-//     let mut t =  vec![0.];
-//     let mut v =  vec![v0];
-//     for (i, t) in data.iter().enumerate() {
-//         v.push(*t);
-//         sma_vec.push(ts_sma_v3d_list.1[i].magnitude());
-//     }
+pub fn calc_velocity_arr(acc_data: &[Vector3d], tick: &f64) -> (Vec<Vector3d>, Vec<f64>){
+    let mut res =  vec![Vector3d::new(0.0, 0.0, 0.0)];
+    let mut mag = vec![0.];
 
-
-// }
+    for (i, acc_v3d) in acc_data.iter().enumerate() {
+        let cur_add_to_velosity = acc_v3d.apply_for_all_axis(
+            |val| val*tick
+        );
+        let new_velocity_v3d = res.last().unwrap().add_v3d(&cur_add_to_velosity);
+        res.push(new_velocity_v3d.clone());
+        mag.push(mag.last().unwrap() + cur_add_to_velosity.magnitude() - 9.81*tick);
+    }
+    (res, mag)
+}
 
 pub fn abs_sma_xyz(t: Vec<f64>, sma_xyz_data: Vec<Vector3d>) -> (Vec<f64>, Vec<Vector3d>) {
     // let mut abs_sma_xyz:Vec<Vector3d> =  Vec::new();

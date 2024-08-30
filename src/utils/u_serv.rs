@@ -23,7 +23,7 @@ pub fn abs_max(f_prev: f64, f_new: f64) -> f64 {
     f_prev.abs().max(f_new.abs())
 }
 
-
+#[derive(Clone)]
 pub struct Vector3d {
     pub x: f64,
     pub y: f64,
@@ -75,6 +75,13 @@ impl Vector3d {
             x: self.x - sub.x,
             y: self.y - sub.y,
             z: self.z - sub.z,
+        }
+    }
+    pub fn add_v3d(&self, add: &Self) -> Self {
+        Self {
+            x: self.x + add.x,
+            y: self.y + add.y,
+            z: self.z + add.z,
         }
     }
 }
