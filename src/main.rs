@@ -24,7 +24,11 @@ use analise::{calc_velocity_arr, v3d_list_to_magnitude_sma_list};
 use file_sys_serv::{save_det_log_to_txt, save_sma_log_to_txt};
 use lazy_static::lazy_static;
 
-use plot_serv::{gnu_plot_series, gnu_plot_single, gnu_plot_single_spr, gnu_plot_stats_for_data};
+use plot_serv::{
+    gnu_plot_v3d_series_and_stats,
+    gnu_plot_single_series,
+    // gnu_plot_stats_for_v3d_data,
+};
 use rfd::FileDialog;
 use config::{Config, File as Cfg_file};
 
@@ -110,16 +114,16 @@ pub fn parse_mp4_files(
 
 
 fn plot_parsed_analised_base_series(data: &[Vector3d], base_series: &[usize]) {
-    gnu_plot_series(data, base_series);
+    gnu_plot_v3d_series_and_stats(data, base_series);
 }
 fn plot_velosity_list(data: &[Vector3d], base_series: &[usize]) {
     let velocity_list = calc_velocity_arr(data, &telemetry_parser_serv::DEF_TICK);
-    gnu_plot_series(&velocity_list.0, base_series);
-    gnu_plot_single(&velocity_list.1, &telemetry_parser_serv::DEF_TICK, "mag_v");
+    gnu_plot_v3d_series_and_stats(&velocity_list.0, base_series);
+    gnu_plot_single_series(&velocity_list.1, &telemetry_parser_serv::DEF_TICK, "mag_v");
 }
 
 fn plot_parsed_iso_series(data: &[u32], title: &str) {
-    gnu_plot_single(data, &telemetry_parser_serv::DEF_TICK, title);
+    gnu_plot_single_series(data, &telemetry_parser_serv::DEF_TICK, title);
 }
 
 fn save_log_data(src_file_path: &PathBuf, res_data: &TelemetryParsedData) {
@@ -193,11 +197,11 @@ fn main() {
                         //     &res_data.iso_data.0.vals,
                         //     &res_data.file_name,
                         // );
-                        // plot_serv::gnu_plot_ts_data(
-                        //     &res_data.iso_data.1.ts,
-                        //     &res_data.iso_data.1.vals,
-                        //     &res_data.file_name,
-                        // );
+                        plot_serv::gnu_plot_single_ts_data_series(
+                            &res_data.iso_data.1.ts,
+                            &res_data.iso_data.1.vals,
+                            &res_data.file_name,
+                        );
                         // if SAVE_LOG {
                         //     save_log_data(&src_files_path_list[0], &res_data);
                         // };
