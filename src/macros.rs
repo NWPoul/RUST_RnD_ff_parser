@@ -3,7 +3,7 @@
 #[macro_export]
 macro_rules! promptExit {
     ($msg: expr) => {
-        crate::utils::u_serv::prompt_to_exit($msg);
+        $crate::utils::u_serv::prompt_to_exit($msg);
         return;
     };
 }

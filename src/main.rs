@@ -20,13 +20,13 @@ mod cli_config;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use analise::{calc_velocity_arr, v3d_list_to_magnitude_sma_list};
+use analise::{calc_velocity_arr, data_to_stat_vals_arr, v3d_list_to_magnitude_sma_list, v3d_list_to_magnitude_smaspr_list, v3d_list_to_plainsum_sma_list, v3d_list_to_ts_sma_v3d_list};
 use file_sys_serv::{save_det_log_to_txt, save_sma_log_to_txt};
 use lazy_static::lazy_static;
 
 use plot_serv::{
-    gnu_plot_v3d_series_and_stats,
-    gnu_plot_single_series,
+    gnu_plot_multi_ts_data,
+    gnu_plot_single_data, gnu_plot_v3d_and_multi_ts_data,
     // gnu_plot_stats_for_v3d_data,
 };
 use rfd::FileDialog;
@@ -36,7 +36,8 @@ use cli_config::get_cli_merged_config;
 
 
 // use file_sys_serv::get_output_filename;
-use telemetry_parser_serv::{get_result_metadata_for_file, TelemetryParsedData};
+use telemetry_parser_serv::{get_result_metadata_for_file, IsoAndExpData, TelemetryParsedData};
+
 use utils::u_serv::Vector3d;
 
 
@@ -77,25 +78,6 @@ pub fn format_acc_datablock(acc_n_time: &(f64, f64)) -> String {
     format!("{:.2}m/s2  @ {}s", acc_n_time.0, acc_n_time.1)
 }
 
-// struct FileAnalysisResult {
-//     pub device_name : String,
-//     pub start_time  : f64,
-//     pub end_time    : f64,
-//     pub max_acc_data: (f64, f64),
-// }
-// impl FileAnalysisResult {
-//     pub fn get_description(&self) -> String {
-//         format!(
-//             "CAM: {} Freefall: {}s-{}s ({}s) Max Acc: {}",
-//             self.device_name,
-//             self.start_time,
-//             self.end_time,
-//             self.end_time - self.start_time,
-//             format_acc_datablock(&(self.max_acc_data.0, self.max_acc_data.1))
-//         )
-//     }
-// }
-
 
 
 pub fn parse_mp4_files(
@@ -113,26 +95,8 @@ pub fn parse_mp4_files(
 
 
 
-fn plot_parsed_analised_base_series(data: &[Vector3d], base_series: &[usize]) {
-    gnu_plot_v3d_series_and_stats(data, base_series);
-}
-fn plot_velosity_list(data: &[Vector3d], base_series: &[usize]) {
-    let velocity_list = calc_velocity_arr(data, &telemetry_parser_serv::DEF_TICK);
-    gnu_plot_v3d_series_and_stats(&velocity_list.0, base_series);
-    gnu_plot_single_series(&velocity_list.1, &telemetry_parser_serv::DEF_TICK, "mag_v");
-}
 
-fn plot_parsed_iso_series(data: &[u32], title: &str) {
-    gnu_plot_single_series(data, &telemetry_parser_serv::DEF_TICK, title);
-}
 
-fn save_log_data(src_file_path: &PathBuf, res_data: &TelemetryParsedData) {
-    save_det_log_to_txt(&res_data.acc_data, src_file_path);
-    save_sma_log_to_txt(
-        &v3d_list_to_magnitude_sma_list(&res_data.acc_data, 1 as usize),
-        src_file_path,
-    );
-}
 
 
 fn input_sma_base() {
@@ -159,6 +123,100 @@ fn input_sma_base() {
 
 
 
+fn plot_parsed_analised_base_series(data: &[Vector3d], base_series: &[usize], title: &str) {
+    gnu_plot_v3d_series_and_stats(data, base_series, title);
+}
+fn plot_velosity_list(data: &[Vector3d], base_series: &[usize], title: &str) {
+    let velocity_list = calc_velocity_arr(data, &telemetry_parser_serv::DEF_TICK);
+    gnu_plot_v3d_series_and_stats(&velocity_list.0, base_series, title);
+    gnu_plot_single_data(&velocity_list.1, &telemetry_parser_serv::DEF_TICK, "mag_v");
+}
+
+fn save_log_data(src_file_path: &PathBuf, res_data: &TelemetryParsedData) {
+    save_det_log_to_txt(&res_data.acc_data, src_file_path);
+    save_sma_log_to_txt(
+        &v3d_list_to_magnitude_sma_list(&res_data.acc_data, 1 as usize),
+        src_file_path,
+    );
+}
+
+fn gnu_plot_stats_for_v3d_data(data: &[Vector3d], base_series: &[usize], title: &str) {
+    let mut sma_magnitude_series: Vec<(Vec<f64>, Vec<f64>, String, &str)> = Vec::new();
+    let mut spr_magnitude_series: Vec<(Vec<f64>, Vec<f64>, String, &str)> = Vec::new();
+
+    let base_to_label = |base: &usize| format!("{} pt", base);
+    for base in base_series {
+        let cur_stats = v3d_list_to_magnitude_smaspr_list(data, *base);
+        sma_magnitude_series.push((cur_stats.0.clone(), cur_stats.1, base_to_label(base), "black"));
+        spr_magnitude_series.push((cur_stats.0        , cur_stats.2, base_to_label(base), "brown"));
+    }
+
+    gnu_plot_multi_ts_data(
+        &[sma_magnitude_series, spr_magnitude_series].concat(),
+        title
+    );
+}
+
+
+
+
+
+type StatsBaseSeries = Vec<(Vec<f64>, Vec<f64>     , usize, String)>;
+type V3dBaseSeries   = Vec<(Vec<f64>, Vec<Vector3d>, usize)>;
+
+fn get_stats_for_v3d_base_series(data: &[Vector3d], series_props: &[usize]) -> (StatsBaseSeries, StatsBaseSeries) {
+    let mut sma_magnitude_series: StatsBaseSeries = Vec::new();
+    let mut sma_plainsum_series : StatsBaseSeries = Vec::new();
+    
+    for base in series_props {
+        let cur_magnitude_sma = v3d_list_to_magnitude_sma_list(data, *base);
+        let cur_plainsum_sma  = v3d_list_to_plainsum_sma_list(data, *base);
+        sma_magnitude_series.push((cur_magnitude_sma.0, cur_magnitude_sma.1, *base, "black".into()));
+        sma_plainsum_series.push((cur_plainsum_sma.0, cur_plainsum_sma.1   , *base, "brown".into()));
+    }
+    (sma_magnitude_series, sma_plainsum_series)
+}
+
+
+pub fn gnu_plot_v3d_series_and_stats(data: &[Vector3d], series_props: &[usize], title: &str) {
+    let v3d_sma: V3dBaseSeries = series_props.iter().map(|base| {
+        let cur_v3d_sma  = v3d_list_to_ts_sma_v3d_list(data, *base);
+        (cur_v3d_sma.0, cur_v3d_sma.1, *base)
+    }).collect();
+
+    let (
+        sma_magnitude_series,
+        sma_plainsum_series,
+    ) = get_stats_for_v3d_base_series(data, series_props);
+
+    gnu_plot_v3d_and_multi_ts_data(
+        &v3d_sma,
+        &[sma_magnitude_series, sma_plainsum_series].concat(),
+        title,
+    );
+}
+
+
+
+
+
+
+
+
+fn plot_iso_series(data: &IsoAndExpData, base_series: &[usize], title: &str) {
+    let mut iso_series: StatsBaseSeries = Vec::new();
+    
+    for base in base_series {
+        let cur_iso_stats = data_to_stat_vals_arr(&data.vals, *base);
+        iso_series.push((data.ts.clone(), cur_iso_stats.sma, *base, "black".into()));
+    }
+
+    gnu_plot_multi_ts_data(&iso_series, title);
+}
+
+
+
+
 fn main() {
     let mut config_values = get_config_values();
     config_values = get_cli_merged_config(config_values);
@@ -179,27 +237,22 @@ fn main() {
             for res in parsing_result {
                 match res {
                     Ok(res_data) => {
-                        plot_parsed_analised_base_series(
-                            &res_data.acc_data,
-                            &base_series,
-                        );
+                        // plot_parsed_analised_base_series(
+                        //     &res_data.acc_data,
+                        //     &base_series,
+                        // );
                         // gnu_plot_stats_for_data(
                         //     &res_data.acc_data,
                         //     &base_series,
                         // );
-                        plot_velosity_list(
-                            &res_data.acc_data,
-                            &base_series,
-                        );
-
-                        // plot_serv::gnu_plot_ts_data(
-                        //     &res_data.iso_data.0.ts,
-                        //     &res_data.iso_data.0.vals,
-                        //     &res_data.file_name,
+                        // plot_velosity_list(
+                        //     &res_data.acc_data,
+                        //     &base_series,
                         // );
-                        plot_serv::gnu_plot_single_ts_data_series(
-                            &res_data.iso_data.1.ts,
-                            &res_data.iso_data.1.vals,
+
+                        plot_iso_series(
+                            &res_data.iso_exp_data.exp,
+                            &base_series,
                             &res_data.file_name,
                         );
                         // if SAVE_LOG {

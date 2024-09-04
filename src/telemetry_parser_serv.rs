@@ -3,7 +3,7 @@
 
 // use std::time::Instant;
 use std::sync::{ Arc, atomic::AtomicBool };
-use std::ops::{Add, Div};
+// use std::ops::{Add, Div};
 
 use telemetry_parser::Input as TpInput;
 use telemetry_parser::util as tp_util;
@@ -17,26 +17,17 @@ use telemetry_parser::tags_impl::{
 use crate::utils::u_serv::Vector3d;
 
 
-
-struct Opts {
-    input: String,
-    dump: bool,
-    imuo: Option<String>,
-}
-
-
-pub struct IsoData {
+pub struct IsoAndExpData {
     pub ts  : Vec<f64>,
     pub vals: Vec<f64>,
 }
-impl IsoData {
+impl IsoAndExpData {
     pub fn new_with_capacity(capacity: usize) -> Self {
-        IsoData{
+        IsoAndExpData{
             ts  : Vec::<f64>::with_capacity(capacity),
             vals: Vec::<f64>::with_capacity(capacity),
         }
     }
-
     pub fn add_vals(&mut self, new_vals: &[f64], step: f64) {
         let start_ts = *self.ts.last().unwrap_or(&0.0) + step;
         let new_ts: Vec<f64> = (0..new_vals.len()).map(|i| start_ts + (i as f64) * step).collect();
@@ -45,17 +36,22 @@ impl IsoData {
     }
 }
 
+pub struct IsoAndExpDataObj {
+    pub iso: IsoAndExpData,
+    pub exp: IsoAndExpData,
+}
 
-struct CameraInfo {
-    model : String,
-    serial: Option<String>,
+
+pub struct CameraInfo {
+    pub model : String,
+    pub serial: Option<String>,
 }
 
 pub struct TelemetryParsedData {
-    pub file_name: String,
-    pub cam_info : CameraInfo,
-    pub acc_data : Vec<Vector3d>,
-    pub iso_data : (IsoData, IsoData),
+    pub file_name   : String,
+    pub cam_info    : CameraInfo,
+    pub acc_data    : Vec<Vector3d>,
+    pub iso_exp_data: IsoAndExpDataObj,
 }
 
 
@@ -63,6 +59,13 @@ pub struct TelemetryParsedData {
 pub const DEF_TICK: f64 = 0.005;
 
 
+
+
+fn convert_array_to_f64<T: Into<f64> + Copy>(arr: &[T]) -> Vec<f64> {
+    arr.iter()
+        .map(|x| (*x).into())
+        .collect()
+}
 
 fn _get_additional_metadata(samples: &[tp_util::SampleInfo]) {
     let mut csv = String::with_capacity(2*1024*1024);
@@ -79,7 +82,7 @@ fn _get_additional_metadata(samples: &[tp_util::SampleInfo]) {
     });
 }
 
-
+#[allow(unused)]
 fn dump_samples(samples: &[tp_util::SampleInfo]) {
     for info in samples {
         if info.tag_map.is_none() { continue; }
@@ -126,15 +129,60 @@ fn get_cam_info(input: &TpInput) -> CameraInfo {
     // dump_samples(&samples[0..2]);
 }
 
+fn get_iso_data(input: &TpInput) -> std::io::Result<IsoAndExpDataObj> {
+    let mut iso_data = IsoAndExpData::new_with_capacity(10000);
+    let mut exp_data = IsoAndExpData::new_with_capacity(10000);
 
-pub fn parse_telemetry_from_mp4_file(input_file: &str) -> Result<TelemetryParsedData, String> {
-    let opts: Opts = Opts {
-        input: input_file.into(),
-        dump: false,
-        imuo: None,
-    };
+    fn add_isoexp_vals<T: Into<f64> + Copy>(arr: &[T], duration: f64, res_arr: &mut IsoAndExpData) {
+        let arr = convert_array_to_f64(&arr);
+        let tick = duration / arr.len() as f64;
+        res_arr.add_vals(&arr, tick / 1000.0)
+    }
 
-    let mut stream = match std::fs::File::open(&opts.input) {
+    if let Some(ref samples) = input.samples {
+        for info in samples {
+            if info.tag_map.is_none() { continue }
+            let duration = info.duration_ms;
+            let grouped_tag_map = info.tag_map.as_ref().unwrap();
+
+
+            for (group, map) in grouped_tag_map {
+                if group == &GroupId::Custom("SensorISO".to_string()) {
+                    if let Some(taginfo) = map.get(&TagId::Data) {
+                        match &taginfo.value {
+                            TagValue::Vec_u32(arr) => add_isoexp_vals(arr.get(), duration, &mut iso_data),
+                            TagValue::Vec_u16(arr) => add_isoexp_vals(arr.get(), duration, &mut iso_data),
+                            _ => { dbg!("SensorISO NOT Vec_u32 or Vec_u16 !!!"); }
+                        }
+                    }
+                }
+                if group == &GroupId::Exposure {
+                    if let Some(taginfo) = map.get(&TagId::Data) {
+                        match &taginfo.value {
+                            TagValue::Vec_f32(arr) => add_isoexp_vals(arr.get(), duration, &mut exp_data),
+                            _ => { dbg!("EXPOSURE NOT Vec_u32 !!!"); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(
+        IsoAndExpDataObj {
+            iso: iso_data,
+            exp: exp_data,
+        }
+    )
+}
+
+
+
+
+
+
+
+pub fn parse_telemetry_from_mp4_file(src_file: &str) -> Result<TelemetryParsedData, String> {
+    let mut stream = match std::fs::File::open(src_file) {
         Ok(stream) => stream,
         Err(e) => {return Err(e.to_string());},
     };
@@ -144,15 +192,15 @@ pub fn parse_telemetry_from_mp4_file(input_file: &str) -> Result<TelemetryParsed
         Err(e) => {return Err(format!("NO_METADATA! {}", e.to_string()));},
     };
 
-    let input = TpInput::from_stream(&mut stream, filesize, &opts.input, |_|(), Arc::new(AtomicBool::new(false))).unwrap();
+    let input = TpInput::from_stream(&mut stream, filesize, src_file, |_|(), Arc::new(AtomicBool::new(false))).unwrap();
  
     let cam_info = get_cam_info(&input);
 
     let iso_data = get_iso_data(&input);
 
-    let mut telemetry_xyz_acc_data : Vec<Vector3d> = Vec::new();
+    let mut acc_data : Vec<Vector3d> = Vec::new();
 
-    let imu_data = match tp_util::normalized_imu_interpolated(&input, opts.imuo) {
+    let imu_data = match tp_util::normalized_imu_interpolated(&input, None) {
         Ok(data) => data,
         Err(e)   => {return Err(format!("FAIL TO GET IMUDATA! {}", e.to_string()));},
     };
@@ -160,15 +208,15 @@ pub fn parse_telemetry_from_mp4_file(input_file: &str) -> Result<TelemetryParsed
     for v in imu_data {
         if v.accl.is_some() {
             let accl = v.accl.unwrap_or_default();
-            telemetry_xyz_acc_data.push(Vector3d::new(accl[0], accl[1], accl[2]));
+            acc_data.push(Vector3d::new(accl[0], accl[1], accl[2]));
         }
     }
 
     Ok(TelemetryParsedData {
-        file_name: input_file.to_string(),
-        cam_info : cam_info,
-        acc_data : telemetry_xyz_acc_data,
-        iso_data : iso_data.expect("msg"),
+        cam_info,
+        file_name   : src_file.to_string(),
+        acc_data,
+        iso_exp_data: iso_data.expect("no iso/exposure data found!"),
     })
 }
 
@@ -179,74 +227,11 @@ pub fn get_result_metadata_for_file(input_file: &str) -> Result<TelemetryParsedD
         cam_info : telemetry_data.cam_info,
         acc_data : telemetry_data.acc_data,
         
-        iso_data : telemetry_data.iso_data,
+        iso_exp_data : telemetry_data.iso_exp_data,
     })
 }
 
 
 
-
-
-
-
-pub fn convert_array_to_f64<T: Into<f64> + Copy>(arr: &[T]) -> Vec<f64> {
-    arr.iter()
-        .map(|x| (*x).into())
-        .collect()
-}
-fn perform_operations(arr: Vec<f64>, duration: f64, res_arr: &mut IsoData) {
-    let tick = duration / arr.len() as f64;
-    res_arr.add_vals(&arr, tick)
-}
-
-pub fn get_iso_data(input: &TpInput) -> std::io::Result<(IsoData, IsoData)> {
-    // let accurate_ts = input.has_accurate_timestamps();
-    let mut final_iso_data = IsoData::new_with_capacity(10000);
-    let mut final_expusure_data = IsoData::new_with_capacity(10000);
-
-    if let Some(ref samples) = input.samples {
-        for info in samples {
-            if info.tag_map.is_none() { continue; }
-            let duration = info.duration_ms;
-
-            let grouped_tag_map = info.tag_map.as_ref().unwrap();
-
-
-
-            for (group, map) in grouped_tag_map {
-                if group == &GroupId::Custom("SensorISO".to_string()) {
-                    if let Some(taginfo) = map.get(&TagId::Data) {
-                        match &taginfo.value {
-                            TagValue::Vec_u32(arr) => {
-                                let arr = convert_array_to_f64(arr.get());
-                                perform_operations(arr, duration, &mut final_iso_data);
-                            },
-                            TagValue::Vec_u16(arr) => {
-                                let arr = convert_array_to_f64(arr.get());
-                                perform_operations(arr, duration, &mut final_iso_data);
-                            },
-                            _ => { dbg!("SensorISO NOT Vec_u32!!!"); }
-                        }
-                    }
-                }
-
-                if group == &GroupId::Exposure {
-                    if let Some(taginfo) = map.get(&TagId::Data) {
-                        match &taginfo.value {
-                            // Sony and GoPro
-                            TagValue::Vec_f32(arr) => {
-                                let arr = convert_array_to_f64(arr.get());
-                                perform_operations(arr, duration, &mut final_expusure_data);
-                            },
-                           
-                            _ => { dbg!("EXPOSURE NOT Vec_u32!!!"); }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    Ok((final_iso_data, final_expusure_data))
-}
 
 

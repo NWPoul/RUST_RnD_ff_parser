@@ -8,7 +8,7 @@ pub struct StatVals {
 }
 
 #[derive(Default, Debug, PartialEq)]
-pub struct StatVecs {
+pub struct StatValsArr {
     pub sma: Vec<f64>,
     pub spr: Vec<f64>,
 }
@@ -26,9 +26,9 @@ fn calc_elem_stat_vals(data_slice: &[f64]) -> StatVals {
     StatVals{sma, spr}
 }
 
-pub fn data_to_stat_vecs_new(data: &[f64], base: usize) -> StatVecs {
+pub fn data_to_stat_vals_arr(data: &[f64], base: usize) -> StatValsArr {
     let initial_stat = calc_elem_stat_vals(&data[0..base]);
-    let mut stat_vecs = StatVecs{
+    let mut stat_vecs = StatValsArr{
         sma: vec![initial_stat.sma],
         spr: vec![initial_stat.spr],
     };
@@ -39,21 +39,6 @@ pub fn data_to_stat_vecs_new(data: &[f64], base: usize) -> StatVecs {
         stat_vecs.sma.push( cur_stat.sma );
         stat_vecs.spr.push( cur_stat.spr );
     }
-    stat_vecs
-}
-
-pub fn data_to_stat_vecs(data: &[f64], base: usize) -> StatVecs {
-    let mut stat_vecs = StatVecs::default();
-
-    for i in base..data.len() {
-        let cur_data = &data[i - base..i];
-        let cur_stat = calc_elem_stat_vals(cur_data);
-        stat_vecs.sma.push( cur_stat.sma );
-        stat_vecs.spr.push( cur_stat.spr );
-    }
-    println!("CHECK NEW SMA{:?}",
-        data_to_stat_vecs_new(data, base) == stat_vecs
-    );
     stat_vecs
 }
 
@@ -170,6 +155,8 @@ pub fn get_max_vec_data(t_acc_data: &(Vec<f64>, Vec<f64>)) -> (f64, f64) {
 
 
 
+
+
 #[test]
 fn test_sma_calculation() {
     let test_data: Vec<f64> = vec![
@@ -178,11 +165,13 @@ fn test_sma_calculation() {
         110., 210., 301., 410., 501.,
     ];
 
-    let base = 7 as usize;
-    let calc     = data_to_stat_vecs(&test_data, base);
-    let new_calc = data_to_stat_vecs_new(&test_data, base);
-    
-    // println!("calc {:?} newcalc{:?} eq {:?}", calc, new_calc, new_calc == calc);
 
-    assert_eq!(new_calc, calc);
+    let base = 7 as usize;
+    let test_res = StatValsArr {
+        sma: vec![6.428571428571429, 10.571428571428571, 16.0, 22.714285714285715, 37.857142857142854, 67.14285714285714, 108.71428571428571, 164.42857142857142],
+        spr: vec![44.285714285714285, 111.95238095238096, 209.66666666666666, 321.5714285714286, 1265.4761904761901, 5023.809523809524, 11578.238095238094, 21773.95238095238]
+    };
+
+    let calc = data_to_stat_vals_arr(&test_data, base);
+    assert_eq!(calc, test_res);
 }
