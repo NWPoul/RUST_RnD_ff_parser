@@ -34,27 +34,31 @@ pub fn ends_with_one(value: usize) -> bool {
 
 
 
+pub enum Axis3d { X, Y, Z }
 #[derive(Clone)]
 pub struct Vector3d {
     pub x: f64,
     pub y: f64,
     pub z: f64,
 }
-pub enum Index3D { X, Y, Z }
-
 
 impl Vector3d {
+    pub const AXIS: [Axis3d; 3] = [Axis3d::X, Axis3d::Y, Axis3d::Z];
+    
     pub fn new(x:f64, y:f64, z:f64) -> Self {
         Self { x, y, z }
     }
-
-    pub fn get_axis_val_by_index(&self, i: &Index3D) -> f64 {
+    
+    pub fn get_axis_val(&self, i: &Axis3d) -> f64 {
         match i {
-            Index3D::X => self.x,
-            Index3D::Y => self.y,
-            Index3D::Z => self.z,
-            // _ => panic!("index can be only 0, 1, 2")
+            Axis3d::X => self.x,
+            Axis3d::Y => self.y,
+            Axis3d::Z => self.z,
         }
+    }
+
+    pub fn axis_iter() -> std::slice::Iter<'static, Axis3d> {
+        Self::AXIS.iter()
     }
 
     pub fn apply_for_all_axis<F: Fn(f64)->f64>(&self, f: F) -> Self {
