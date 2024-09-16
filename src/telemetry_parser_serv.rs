@@ -177,23 +177,20 @@ fn get_gravity_vector_data(input: &TpInput) -> std::io::Result<(Vec<f64>, Vec<Ve
     let mut gravity_vector_data:Vec<Vector3d> = Vec::with_capacity(10000);
 
     if let Some(ref samples) = input.samples {
-        for info in samples[..3].iter() {
+        for info in samples[..2].iter() {
             if info.tag_map.is_none() { continue }
             let duration = info.duration_ms;
             let grouped_tag_map = info.tag_map.as_ref().unwrap();
 
 
             for (group, map) in grouped_tag_map {
-                
                 if group == &GroupId::GravityVector {
-                    dbg!(group, map);
                     if let Some(taginfo) = map.get(&TagId::Data) {
-                        dbg!(taginfo);
-                        // match &taginfo.value {
-                        //     TagValue::Vec_u32(arr) => add_isoexp_vals(arr.get(), duration, &mut iso_data),
-                        //     TagValue::Vec_u16(arr) => add_isoexp_vals(arr.get(), duration, &mut iso_data),
-                        //     _ => { dbg!("SensorISO NOT Vec_u32 or Vec_u16 !!!"); }
-                        // }
+                        match &taginfo.value {
+                            TagValue::Vec_i16(arr) => add_isoexp_vals(arr.get(), duration, &mut iso_data),
+                            TagValue::Vec_u32(arr) => add_isoexp_vals(arr.get(), duration, &mut iso_data),
+                            _ => { dbg!("SensorISO NOT Vec_u32 or Vec_u16 !!!"); }
+                        }
                     }
                 }
             }
@@ -219,13 +216,13 @@ pub fn parse_telemetry_from_mp4_file(src_file: &str) -> Result<TelemetryParsedDa
     };
 
     let input = TpInput::from_stream(&mut stream, filesize, src_file, |_|(), Arc::new(AtomicBool::new(false))).unwrap();
- 
+    dbg!(input.has_accurate_timestamps());
     let cam_info = get_cam_info(&input);
 
     let iso_data = get_iso_data(&input);
     let gravity_vector_data = get_gravity_vector_data(&input);
     let samples = input.samples.clone().unwrap();
-    // dump_samples(&samples[..3]);
+    // dump_samples(&samples[..2]);
 
     let mut acc_data : Vec<Vector3d> = Vec::new();
 

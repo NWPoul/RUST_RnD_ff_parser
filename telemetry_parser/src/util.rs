@@ -299,7 +299,9 @@ pub fn normalized_imu(input: &crate::Input, orientation: Option<String>) -> Resu
             let grouped_tag_map = info.tag_map.as_ref().unwrap();
 
             for (group, map) in grouped_tag_map {
-                if group == &GroupId::Gyroscope || group == &GroupId::Accelerometer || group == &GroupId::Magnetometer {
+                if group == &GroupId::Gyroscope
+                || group == &GroupId::Accelerometer
+                || group == &GroupId::GravityVector {
                     let raw2unit = crate::try_block!(f64, {
                         match &map.get(&TagId::Scale)?.value {
                             TagValue::i16(v) => *v.get() as f64,
@@ -344,7 +346,7 @@ pub fn normalized_imu(input: &crate::Input, orientation: Option<String>) -> Resu
                                     let itm = v.clone().into_scaled(&raw2unit, &unit2deg).orient(io);
                                          if group == &GroupId::Gyroscope     { final_data[data_index + j].gyro = Some([ itm.x, itm.y, itm.z ]); }
                                     else if group == &GroupId::Accelerometer { final_data[data_index + j].accl = Some([ itm.x, itm.y, itm.z ]); }
-                                    else if group == &GroupId::Magnetometer  { final_data[data_index + j].magn = Some([ itm.x, itm.y, itm.z ]); }
+                                    else if group == &GroupId::GravityVector  { final_data[data_index + j].magn = Some([ itm.x, itm.y, itm.z ]); }
                                 }
                             },
                             // Insta360
@@ -363,7 +365,7 @@ pub fn normalized_imu(input: &crate::Input, orientation: Option<String>) -> Resu
                                     let itm = v.clone().into_scaled(&raw2unit, &unit2deg).orient(io);
                                          if group == &GroupId::Gyroscope     { final_data[data_index + j].gyro = Some([ itm.x, itm.y, itm.z ]); }
                                     else if group == &GroupId::Accelerometer { final_data[data_index + j].accl = Some([ itm.x, itm.y, itm.z ]); }
-                                    else if group == &GroupId::Magnetometer  { final_data[data_index + j].magn = Some([ itm.x, itm.y, itm.z ]); }
+                                    else if group == &GroupId::GravityVector  { final_data[data_index + j].magn = Some([ itm.x, itm.y, itm.z ]); }
                                 }
                             },
                             _ => ()
