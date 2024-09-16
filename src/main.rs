@@ -237,24 +237,23 @@ fn main() {
             for res in parsing_result {
                 match res {
                     Ok(res_data) => {
-                        // plot_parsed_analised_base_series(
-                        //     &res_data.acc_data,
-                        //     &base_series,
-                        // );
-                        // gnu_plot_stats_for_data(
-                        //     &res_data.acc_data,
-                        //     &base_series,
-                        // );
+                        plot_parsed_analised_base_series(
+                            &res_data.acc_data,
+                            &base_series,
+                            
+                            &res_data.file_name,
+                        );
+
                         // plot_velosity_list(
                         //     &res_data.acc_data,
                         //     &base_series,
                         // );
 
-                        plot_iso_series(
-                            &res_data.iso_exp_data.exp,
-                            &base_series,
-                            &res_data.file_name,
-                        );
+                        // plot_iso_series(
+                        //     &res_data.iso_exp_data.exp,
+                        //     &base_series,
+                        //     &res_data.file_name,
+                        // );
                         // if SAVE_LOG {
                         //     save_log_data(&src_files_path_list[0], &res_data);
                         // };

@@ -67,20 +67,6 @@ fn convert_array_to_f64<T: Into<f64> + Copy>(arr: &[T]) -> Vec<f64> {
         .collect()
 }
 
-fn _get_additional_metadata(samples: &[tp_util::SampleInfo]) {
-    let mut csv = String::with_capacity(2*1024*1024);
-    telemetry_parser::try_block!({
-        let map = samples.get(0)?.tag_map.as_ref()?;
-        let json = (map.get(&GroupId::Default)?.get_t(TagId::Metadata) as Option<&serde_json::Value>)?;
-        for (k, v) in json.as_object()? {
-            csv.push('"');
-            csv.push_str(&k.to_string());
-            csv.push_str("\",");
-            csv.push_str(&v.to_string());
-            csv.push('\n');
-        }
-    });
-}
 
 #[allow(unused)]
 fn dump_samples(samples: &[tp_util::SampleInfo]) {
@@ -90,7 +76,7 @@ fn dump_samples(samples: &[tp_util::SampleInfo]) {
 
         for (group, map) in grouped_tag_map {
             for (tagid, taginfo) in map {
-                println!("{: <25} {: <20} {: <10}: {}", format!("{}", group), format!("{}", tagid), taginfo.description, &taginfo.value.to_string().chars().take(50).collect::<String>());
+                println!("{: <25} {: <20} {: <10}: {}{}", format!("{}", group), format!("{}", tagid), taginfo.description, &taginfo.value.to_string().len(), &taginfo.value.to_string().chars().take(50).collect::<String>());
             }
         }
     }
@@ -179,6 +165,46 @@ fn get_iso_data(input: &TpInput) -> std::io::Result<IsoAndExpDataObj> {
 
 
 
+fn add_vals(ts: &mut Vec<f64>, vals: &mut Vec<Vector3d>, new_vals: &[Vector3d], step: f64) {
+        let start_ts = ts.last().unwrap_or(&0.0) + step;
+        let new_ts: Vec<f64> = (0..new_vals.len()).map(|i| start_ts + (i as f64) * step).collect();
+        ts.extend(new_ts);
+        vals.extend_from_slice(new_vals);
+    }
+
+fn get_gravity_vector_data(input: &TpInput) -> std::io::Result<(Vec<f64>, Vec<Vector3d>)> {
+    let mut ts:Vec<f64>                       = Vec::with_capacity(10000);
+    let mut gravity_vector_data:Vec<Vector3d> = Vec::with_capacity(10000);
+
+    if let Some(ref samples) = input.samples {
+        for info in samples[..3].iter() {
+            if info.tag_map.is_none() { continue }
+            let duration = info.duration_ms;
+            let grouped_tag_map = info.tag_map.as_ref().unwrap();
+
+
+            for (group, map) in grouped_tag_map {
+                
+                if group == &GroupId::GravityVector {
+                    dbg!(group, map);
+                    if let Some(taginfo) = map.get(&TagId::Data) {
+                        dbg!(taginfo);
+                        // match &taginfo.value {
+                        //     TagValue::Vec_u32(arr) => add_isoexp_vals(arr.get(), duration, &mut iso_data),
+                        //     TagValue::Vec_u16(arr) => add_isoexp_vals(arr.get(), duration, &mut iso_data),
+                        //     _ => { dbg!("SensorISO NOT Vec_u32 or Vec_u16 !!!"); }
+                        // }
+                    }
+                }
+            }
+        }
+    }
+    Ok( (ts, gravity_vector_data) )
+}
+
+
+
+
 
 
 pub fn parse_telemetry_from_mp4_file(src_file: &str) -> Result<TelemetryParsedData, String> {
@@ -197,6 +223,9 @@ pub fn parse_telemetry_from_mp4_file(src_file: &str) -> Result<TelemetryParsedDa
     let cam_info = get_cam_info(&input);
 
     let iso_data = get_iso_data(&input);
+    let gravity_vector_data = get_gravity_vector_data(&input);
+    let samples = input.samples.clone().unwrap();
+    // dump_samples(&samples[..3]);
 
     let mut acc_data : Vec<Vector3d> = Vec::new();
 
