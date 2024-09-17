@@ -11,7 +11,6 @@ use telemetry_parser::tags_impl::{
     GroupId,
     TagId,
     TagValue,
-    GetWithType,
 };
 
 use crate::utils::u_serv::Vector3d;
@@ -51,6 +50,7 @@ pub struct TelemetryParsedData {
     pub file_name   : String,
     pub cam_info    : CameraInfo,
     pub acc_data    : Vec<Vector3d>,
+    pub gyro_data   : Vec<Vector3d>,
     pub iso_exp_data: IsoAndExpDataObj,
 }
 
@@ -164,46 +164,6 @@ fn get_iso_data(input: &TpInput) -> std::io::Result<IsoAndExpDataObj> {
 
 
 
-
-fn add_vals(ts: &mut Vec<f64>, vals: &mut Vec<Vector3d>, new_vals: &[Vector3d], step: f64) {
-        let start_ts = ts.last().unwrap_or(&0.0) + step;
-        let new_ts: Vec<f64> = (0..new_vals.len()).map(|i| start_ts + (i as f64) * step).collect();
-        ts.extend(new_ts);
-        vals.extend_from_slice(new_vals);
-    }
-
-fn get_gravity_vector_data(input: &TpInput) -> std::io::Result<(Vec<f64>, Vec<Vector3d>)> {
-    let mut ts:Vec<f64>                       = Vec::with_capacity(10000);
-    let mut gravity_vector_data:Vec<Vector3d> = Vec::with_capacity(10000);
-
-    if let Some(ref samples) = input.samples {
-        for info in samples[..2].iter() {
-            if info.tag_map.is_none() { continue }
-            let duration = info.duration_ms;
-            let grouped_tag_map = info.tag_map.as_ref().unwrap();
-
-
-            for (group, map) in grouped_tag_map {
-                if group == &GroupId::GravityVector {
-                    if let Some(taginfo) = map.get(&TagId::Data) {
-                        match &taginfo.value {
-                            TagValue::Vec_i16(arr) => add_isoexp_vals(arr.get(), duration, &mut iso_data),
-                            TagValue::Vec_u32(arr) => add_isoexp_vals(arr.get(), duration, &mut iso_data),
-                            _ => { dbg!("SensorISO NOT Vec_u32 or Vec_u16 !!!"); }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    Ok( (ts, gravity_vector_data) )
-}
-
-
-
-
-
-
 pub fn parse_telemetry_from_mp4_file(src_file: &str) -> Result<TelemetryParsedData, String> {
     let mut stream = match std::fs::File::open(src_file) {
         Ok(stream) => stream,
@@ -216,15 +176,15 @@ pub fn parse_telemetry_from_mp4_file(src_file: &str) -> Result<TelemetryParsedDa
     };
 
     let input = TpInput::from_stream(&mut stream, filesize, src_file, |_|(), Arc::new(AtomicBool::new(false))).unwrap();
-    dbg!(input.has_accurate_timestamps());
     let cam_info = get_cam_info(&input);
 
+
     let iso_data = get_iso_data(&input);
-    let gravity_vector_data = get_gravity_vector_data(&input);
-    let samples = input.samples.clone().unwrap();
+    // let samples = input.samples.clone().unwrap();
     // dump_samples(&samples[..2]);
 
-    let mut acc_data : Vec<Vector3d> = Vec::new();
+    let mut acc_data  : Vec<Vector3d> = Vec::new();
+    let mut gyro_data : Vec<Vector3d> = Vec::new();
 
     let imu_data = match tp_util::normalized_imu_interpolated(&input, None) {
         Ok(data) => data,
@@ -236,12 +196,17 @@ pub fn parse_telemetry_from_mp4_file(src_file: &str) -> Result<TelemetryParsedDa
             let accl = v.accl.unwrap_or_default();
             acc_data.push(Vector3d::new(accl[0], accl[1], accl[2]));
         }
+        if v.magn.is_some() {
+            let gyro = v.gyro.unwrap_or_default();
+            gyro_data.push(Vector3d::new(gyro[0], gyro[1], gyro[2]));
+        }
     }
 
     Ok(TelemetryParsedData {
         cam_info,
         file_name   : src_file.to_string(),
         acc_data,
+        gyro_data,
         iso_exp_data: iso_data.expect("no iso/exposure data found!"),
     })
 }
@@ -252,6 +217,7 @@ pub fn get_result_metadata_for_file(input_file: &str) -> Result<TelemetryParsedD
         file_name: input_file.to_string(),
         cam_info : telemetry_data.cam_info,
         acc_data : telemetry_data.acc_data,
+        gyro_data: telemetry_data.gyro_data,
         
         iso_exp_data : telemetry_data.iso_exp_data,
     })
@@ -259,5 +225,40 @@ pub fn get_result_metadata_for_file(input_file: &str) -> Result<TelemetryParsedD
 
 
 
+
+
+
+
+
+// fn add_vals(ts: &mut Vec<f64>, vals: &mut Vec<Vector3d>, new_vals: &[Vector3d], step: f64) {
+//         let start_ts = ts.last().unwrap_or(&0.0) + step;
+//         let new_ts: Vec<f64> = (0..new_vals.len()).map(|i| start_ts + (i as f64) * step).collect();
+//         ts.extend(new_ts);
+//         vals.extend_from_slice(new_vals);
+//     }
+
+// fn get_gravity_vector_data(input: &TpInput) -> std::io::Result<(Vec<f64>, Vec<Vector3d>)> {
+//     let mut ts:Vec<f64>                       = Vec::with_capacity(10000);
+//     let mut gravity_vector_data:Vec<Vector3d> = Vec::with_capacity(10000);
+//     if let Some(ref samples) = input.samples {
+//         for info in samples[..2].iter() {
+//             if info.tag_map.is_none() { continue }
+//             let duration = info.duration_ms;
+//             let grouped_tag_map = info.tag_map.as_ref().unwrap();
+//             for (group, map) in grouped_tag_map {
+//                 if group == &GroupId::GravityVector {
+//                     if let Some(taginfo) = map.get(&TagId::Data) {
+//                         // match &taginfo.value {
+//                         //     TagValue::Vec_i16(arr) => add_isoexp_vals(arr.get(), duration, &mut iso_data),
+//                         //     TagValue::Vec_u32(arr) => add_isoexp_vals(arr.get(), duration, &mut iso_data),
+//                         //     _ => { dbg!("SensorISO NOT Vec_u32 or Vec_u16 !!!"); }
+//                         // }
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     Ok( (ts, gravity_vector_data) )
+// }
 
 
