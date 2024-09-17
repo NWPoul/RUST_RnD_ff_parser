@@ -21,7 +21,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use analise::{calc_velocity_arr, data_to_stat_vals_arr, v3d_list_to_magnitude_sma_list, v3d_list_to_magnitude_smaspr_list, v3d_list_to_plainsum_sma_list, v3d_list_to_ts_sma_v3d_list};
-use file_sys_serv::{save_det_log_to_txt, save_sma_log_to_txt};
+// use file_sys_serv::{save_det_log_to_txt, save_sma_log_to_txt};
 use lazy_static::lazy_static;
 
 use plot_serv::{
@@ -132,13 +132,13 @@ fn plot_velosity_list(data: &[Vector3d], base_series: &[usize], title: &str) {
     gnu_plot_single_data(&velocity_list.1, &telemetry_parser_serv::DEF_TICK, "mag_v");
 }
 
-fn save_log_data(src_file_path: &PathBuf, res_data: &TelemetryParsedData) {
-    save_det_log_to_txt(&res_data.acc_data, src_file_path);
-    save_sma_log_to_txt(
-        &v3d_list_to_magnitude_sma_list(&res_data.acc_data, 1 as usize),
-        src_file_path,
-    );
-}
+// fn save_log_data(src_file_path: &PathBuf, res_data: &TelemetryParsedData) {
+//     save_det_log_to_txt(&res_data.acc_data, src_file_path);
+//     save_sma_log_to_txt(
+//         &v3d_list_to_magnitude_sma_list(&res_data.acc_data, 1 as usize),
+//         src_file_path,
+//     );
+// }
 
 fn gnu_plot_stats_for_v3d_data(data: &[Vector3d], base_series: &[usize], title: &str) {
     let mut sma_magnitude_series: Vec<(Vec<f64>, Vec<f64>, String, &str)> = Vec::new();
@@ -243,6 +243,13 @@ fn main() {
                             
                             &res_data.file_name,
                         );
+
+                        // plot_parsed_analised_base_series(
+                        //     &res_data.gyro_data,
+                        //     &base_series,
+                            
+                        //     &res_data.file_name,
+                        // );
 
                         // plot_velosity_list(
                         //     &res_data.acc_data,

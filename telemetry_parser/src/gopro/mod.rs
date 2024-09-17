@@ -34,9 +34,7 @@ impl GoPro {
     pub fn frame_readout_time(&self) -> Option<f64> {
         self.frame_readout_time
     }
-    pub fn normalize_imu_orientation(v: String) -> String {
-        v
-    }
+    pub fn normalize_imu_orientation(v: String) -> String {v}
 
     pub fn detect<P: AsRef<std::path::Path>>(buffer: &[u8], _filepath: P) -> Option<Self> {
         let mut ret = None;

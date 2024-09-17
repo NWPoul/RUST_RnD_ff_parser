@@ -82,10 +82,10 @@ pub fn v3d_list_to_ts_sma_v3d_list(data: &[Vector3d], base: usize) -> (Vec<f64>,
     let mut sma_vec_list:Vec<Vector3d> = Vec::new();
     let mut spr_vec_list:Vec<Vector3d> = Vec::new();
 
-    let mut axis_data: (Vec<f64>, Vec<f64>, Vec<f64>) = (Vec::new(), Vec::new(), Vec::new());
-    for axis in Vector3d::axis_iter() {
-        // let j = Vector3d::AXIS[0];
-    }
+    // let mut axis_data: (Vec<f64>, Vec<f64>, Vec<f64>) = (Vec::new(), Vec::new(), Vec::new());
+    // for axis in Vector3d::axis_iter() {
+    //     // let j = Vector3d::AXIS[0];
+    // }
 
     for i in base..data.len() {
         sma_t.push(i as f64 * 0.005);

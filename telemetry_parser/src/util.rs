@@ -346,7 +346,7 @@ pub fn normalized_imu(input: &crate::Input, orientation: Option<String>) -> Resu
                                     let itm = v.clone().into_scaled(&raw2unit, &unit2deg).orient(io);
                                          if group == &GroupId::Gyroscope     { final_data[data_index + j].gyro = Some([ itm.x, itm.y, itm.z ]); }
                                     else if group == &GroupId::Accelerometer { final_data[data_index + j].accl = Some([ itm.x, itm.y, itm.z ]); }
-                                    else if group == &GroupId::GravityVector  { final_data[data_index + j].magn = Some([ itm.x, itm.y, itm.z ]); }
+                                    else if group == &GroupId::GravityVector { final_data[data_index + j].magn = Some([ itm.x, itm.y, itm.z ]); }
                                 }
                             },
                             // Insta360
@@ -420,7 +420,7 @@ pub fn normalized_imu_interpolated(input: &crate::Input, orientation: Option<Str
             (
                 crate::gopro::GoPro::get_avg_sample_duration(samples, &GroupId::Gyroscope),
                 crate::gopro::GoPro::get_avg_sample_duration(samples, &GroupId::Accelerometer),
-                crate::gopro::GoPro::get_avg_sample_duration(samples, &GroupId::Magnetometer),
+                crate::gopro::GoPro::get_avg_sample_duration(samples, &GroupId::GravityVector),
             )
         } else {
             let mut total_len = (0, 0, 0);
@@ -431,7 +431,7 @@ pub fn normalized_imu_interpolated(input: &crate::Input, orientation: Option<Str
                             match group {
                                 GroupId::Gyroscope     => total_len.0 += arr.get().len(),
                                 GroupId::Accelerometer => total_len.1 += arr.get().len(),
-                                GroupId::Magnetometer  => total_len.2 += arr.get().len(),
+                                GroupId::GravityVector => total_len.2 += arr.get().len(),
                                 _ => {}
                             }
                         }
@@ -471,7 +471,7 @@ pub fn normalized_imu_interpolated(input: &crate::Input, orientation: Option<Str
             let grouped_tag_map = info.tag_map.as_ref().unwrap();
 
             for (group, map) in grouped_tag_map {
-                if group == &GroupId::Gyroscope || group == &GroupId::Accelerometer || group == &GroupId::Magnetometer {
+                if group == &GroupId::Gyroscope || group == &GroupId::Accelerometer || group == &GroupId::GravityVector {
                     let raw2unit = crate::try_block!(f64, {
                         match &map.get(&TagId::Scale)?.value {
                             TagValue::i16(v) => *v.get() as f64,
@@ -509,7 +509,7 @@ pub fn normalized_imu_interpolated(input: &crate::Input, orientation: Option<Str
                                     let itm = v.clone().into_scaled(&raw2unit, &unit2deg).orient(io);
                                          if group == &GroupId::Gyroscope     { let ts = (timestamp.0 * 1000.0f64).round() as i64; gyro_map.insert(ts, itm); timestamp.0 += reading_duration.0.unwrap(); gyro_timestamps.insert(ts); }
                                     else if group == &GroupId::Accelerometer { let ts = (timestamp.1 * 1000.0f64).round() as i64; accl_map.insert(ts, itm); timestamp.1 += reading_duration.1.unwrap(); }
-                                    else if group == &GroupId::Magnetometer  { let ts = (timestamp.2 * 1000.0f64).round() as i64; magn_map.insert(ts, itm); timestamp.2 += reading_duration.2.unwrap(); }
+                                    else if group == &GroupId::GravityVector { let ts = (timestamp.2 * 1000.0f64).round() as i64; magn_map.insert(ts, itm); timestamp.2 += reading_duration.2.unwrap(); }
                                 }
                             },
                             TagValue::Vec_TimeVector3_f64(arr) => {
@@ -527,7 +527,7 @@ pub fn normalized_imu_interpolated(input: &crate::Input, orientation: Option<Str
                                     let itm = v.clone().into_scaled(&raw2unit, &unit2deg).orient(io);
                                          if group == &GroupId::Gyroscope     { gyro_map.insert(timestamp_us, itm);  gyro_timestamps.insert(timestamp_us); }
                                     else if group == &GroupId::Accelerometer { accl_map.insert(timestamp_us, itm); }
-                                    else if group == &GroupId::Magnetometer  { magn_map.insert(timestamp_us, itm); }
+                                    else if group == &GroupId::GravityVector { magn_map.insert(timestamp_us, itm); }
                                 }
                             },
                             _ => ()
@@ -705,25 +705,10 @@ pub fn get_video_metadata<T: Read + Seek>(stream: &mut T, filesize: usize) -> Re
         return Ok(md);
     }
 
-    // Special case for BRAW
-    let mut override_size = None;
-    if memmem::find(&last16kb, b"Blackmagic Design").is_some() {
-        let mut bmd = crate::blackmagic::BlackmagicBraw::default();
-        if let Ok(md) = bmd.parse_meta(stream, filesize) {
-            if let Some(size) = md.get("crop_size").and_then(|x| x.as_array()).filter(|x| x.len() == 2).and_then(|x| Some((x[0].as_f64()? as usize, x[1].as_f64()? as usize))) {
-                override_size = Some(size);
-            }
-        }
-    }
-
     let mp = parse_mp4(stream, filesize)?;
     for track in mp.tracks {
         if track.track_type == TrackType::Video {
-            let mut md = get_video_metadata_from_track(&track)?;
-            if let Some(os) = override_size {
-                md.width = os.0;
-                md.height = os.1;
-            }
+            let md = get_video_metadata_from_track(&track)?;
             return Ok(md);
         }
     }
@@ -746,13 +731,6 @@ pub fn read_box<R: Read + Seek>(reader: &mut R) -> Result<(u32, u64, u64, i64)> 
     }
 }
 
-static mut LOAD_GYRO_ONLY: bool = false;
-pub fn set_load_gyro_only(v: bool) {
-    unsafe { LOAD_GYRO_ONLY = v; }
-}
-pub fn get_load_gyro_only() -> bool{
-    unsafe { LOAD_GYRO_ONLY }
-}
 
 #[macro_export]
 macro_rules! try_block {

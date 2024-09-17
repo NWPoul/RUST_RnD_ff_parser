@@ -5,20 +5,7 @@ mod sony;
 mod gopro;
 mod gyroflow;
 mod insta360;
-mod blackbox;
-mod runcam;
-mod witmotion;
 mod dji;
-mod phone_apps;
-mod ardupilot;
-mod blackmagic;
-mod red;
-mod vuze;
-mod kandao;
-mod camm;
-mod esplog;
-mod cooke;
-mod senseflow;
 mod freefly;
 
 pub mod tags_impl;
@@ -106,18 +93,5 @@ impl_formats! {
     Dji       => dji::Dji,
     Insta360  => insta360::Insta360,
     Gyroflow  => gyroflow::Gyroflow,
-    BlackBox  => blackbox::BlackBox,
-    BlackmagicBraw => blackmagic::BlackmagicBraw,
-    RedR3d    => red::RedR3d,
-    Runcam    => runcam::Runcam,
-    WitMotion => witmotion::WitMotion,
-    PhoneApps => phone_apps::PhoneApps,
-    ArduPilot => ardupilot::ArduPilot,
-    Vuze      => vuze::Vuze,
-    KanDao    => kandao::KanDao,
-    Camm      => camm::Camm,
-    EspLog    => esplog::EspLog,
-    Cooke     => cooke::Cooke,
-    SenseFlow => senseflow::SenseFlow,
     Freefly   => freefly::Freefly,
 }
