@@ -2,7 +2,7 @@
 // Copyright © 2021-2022 Adrian <adrian.eddy at gmail>
 
 mod sony;
-mod gopro;
+pub mod gopro;
 mod gyroflow;
 mod insta360;
 mod dji;

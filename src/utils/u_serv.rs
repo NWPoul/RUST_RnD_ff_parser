@@ -98,4 +98,9 @@ impl From<(f64, f64, f64)> for Vector3d {
         Self { x: tuple.0, y: tuple.1, z: tuple.2 }
     }
 }
+impl From<[f64,3]> for Vector3d {
+    fn from(tuple: (f64, f64, f64)) -> Self {
+        Self { x: tuple.0, y: tuple.1, z: tuple.2 }
+    }
+}
 
