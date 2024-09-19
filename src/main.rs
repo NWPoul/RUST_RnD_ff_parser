@@ -36,7 +36,7 @@ use cli_config::get_cli_merged_config;
 
 
 // use file_sys_serv::get_output_filename;
-use telemetry_parser_serv::{get_result_metadata_for_file, IsoAndExpData, TelemetryParsedData};
+use telemetry_parser_serv::{get_result_metadata_for_file, TelemetryParsedData, TsScalarArr, TsValsArr};
 
 use utils::u_serv::Vector3d;
 
@@ -203,15 +203,19 @@ pub fn gnu_plot_v3d_series_and_stats(data: &[Vector3d], series_props: &[usize], 
 
 
 
-fn plot_iso_series(data: &IsoAndExpData, base_series: &[usize], title: &str) {
-    let mut iso_series: StatsBaseSeries = Vec::new();
+fn plot_iso_series(data: &TsScalarArr, base_series: &[usize], title: &str) {
+    let mut iso_series1: StatsBaseSeries = Vec::new();
+    let mut iso_series2: StatsBaseSeries = Vec::new();
     
     for base in base_series {
-        let cur_iso_stats = data_to_stat_vals_arr(&data.vals, *base);
-        iso_series.push((data.ts.clone(), cur_iso_stats.sma, *base, "black".into()));
+        let base = std::cmp::min(data.v.len() / 2, *base);
+        let cur_iso_stats = data_to_stat_vals_arr(&data.v, base);
+        iso_series1.push((data.t.clone(), cur_iso_stats.sma, base, "black".into()));
+        iso_series2.push((data.t.clone(), cur_iso_stats.spr, base, "black".into()));
     }
 
-    gnu_plot_multi_ts_data(&iso_series, title);
+    gnu_plot_multi_ts_data(&iso_series1, title);
+    gnu_plot_multi_ts_data(&iso_series2, title);
 }
 
 
@@ -237,12 +241,11 @@ fn main() {
             for res in parsing_result {
                 match res {
                     Ok(res_data) => {
-                        plot_parsed_analised_base_series(
-                            &res_data.acc_data,
-                            &base_series,
-                            
-                            &res_data.file_name,
-                        );
+                        // plot_parsed_analised_base_series(
+                        //     &res_data.acc_data.vals,
+                        //     &base_series,
+                        //     &res_data.file_name,
+                        // );
 
                         // plot_parsed_analised_base_series(
                         //     &res_data.gyro_data,
@@ -256,11 +259,11 @@ fn main() {
                         //     &base_series,
                         // );
 
-                        // plot_iso_series(
-                        //     &res_data.iso_exp_data.exp,
-                        //     &base_series,
-                        //     &res_data.file_name,
-                        // );
+                        plot_iso_series(
+                            &res_data.lumen_data,
+                            &base_series,
+                            &res_data.file_name,
+                        );
                         // if SAVE_LOG {
                         //     save_log_data(&src_files_path_list[0], &res_data);
                         // };

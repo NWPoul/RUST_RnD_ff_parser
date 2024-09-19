@@ -20,29 +20,43 @@ use telemetry_parser::tags_impl::{
 use crate::utils::u_serv::Vector3d;
 
 
-pub struct IsoAndExpData {
-    pub ts  : Vec<f64>,
-    pub vals: Vec<f64>,
+pub struct TsValsArr<T: Clone> {
+    pub t: Vec<f64>,
+    pub v: Vec<T>,
 }
-impl IsoAndExpData {
+impl<T: Clone> TsValsArr<T> {
     pub fn new_with_capacity(capacity: usize) -> Self {
-        IsoAndExpData{
-            ts  : Vec::<f64>::with_capacity(capacity),
-            vals: Vec::<f64>::with_capacity(capacity),
+        TsValsArr{
+            t: Vec::<f64>::with_capacity(capacity),
+            v: Vec::<T>::with_capacity(capacity),
         }
     }
-    pub fn add_vals(&mut self, new_vals: &[f64], step: f64) {
-        let start_ts = *self.ts.last().unwrap_or(&0.0) + step;
+    
+
+    pub fn add_vals_by_slice_duration_scaled(&mut self, new_vals: &[T], duration: f64, scale_div: f64) {
+        self.add_vals_by_slice_duration(new_vals, duration / scale_div);
+    }
+
+    pub fn add_vals_by_slice_duration(&mut self, new_vals: &[T], duration: f64) {
+        let step = duration / new_vals.len() as f64;
+        self.add_vals_by_step(new_vals, step);
+    }
+
+    pub fn add_vals_by_step(&mut self, new_vals: &[T], step: f64) {
+        let start_ts = *self.t.last().unwrap_or(&0.0) + step;
         let new_ts: Vec<f64> = (0..new_vals.len()).map(|i| start_ts + (i as f64) * step).collect();
-        self.ts.extend(new_ts);
-        self.vals.extend_from_slice(new_vals);
+        self.t.extend(new_ts);
+        self.v.extend_from_slice(new_vals);
+    }
+    
+    pub fn add_vals_by_ts(&mut self, new_vals: &[T], ts: &[f64]) {
+        self.t.extend_from_slice(ts);
+        self.v.extend_from_slice(new_vals);
     }
 }
 
-pub struct IsoAndExpDataObj {
-    pub iso: IsoAndExpData,
-    pub exp: IsoAndExpData,
-}
+
+
 
 
 pub struct CameraInfo {
@@ -50,12 +64,16 @@ pub struct CameraInfo {
     pub serial: Option<String>,
 }
 
+
+pub type TsV3Arr     = TsValsArr<Vector3d>;
+pub type TsScalarArr = TsValsArr<f64>;
+
 pub struct TelemetryParsedData {
-    pub file_name   : String,
-    pub cam_info    : CameraInfo,
-    pub acc_data    : Vec<Vector3d>,
-    pub gyro_data   : Vec<Vector3d>,
-    pub iso_exp_data: IsoAndExpDataObj,
+    pub file_name : String,
+    pub cam_info  : CameraInfo,
+    pub acc_data  : TsV3Arr,
+    pub gyro_data : TsV3Arr,
+    pub lumen_data: TsScalarArr,
 }
 
 
@@ -64,10 +82,9 @@ pub const DEF_TICK: f64 = 0.005;
 
 
 
-
-fn convert_array_to_f64<T: Into<f64> + Copy>(arr: &[T]) -> Vec<f64> {
+fn convert_array_to_scaled_f64<T: Into<f64> + Copy>(arr: &[T], scale: f64) -> Vec<f64> {
     arr.iter()
-        .map(|x| (*x).into())
+        .map(|x| (*x).into() * scale)
         .collect()
 }
 
@@ -119,15 +136,8 @@ fn get_cam_info(input: &TpInput) -> CameraInfo {
     // dump_samples(&samples[0..2]);
 }
 
-fn get_iso_data(input: &TpInput) -> std::io::Result<IsoAndExpDataObj> {
-    let mut iso_data = IsoAndExpData::new_with_capacity(10000);
-    let mut exp_data = IsoAndExpData::new_with_capacity(10000);
-
-    fn add_isoexp_vals<T: Into<f64> + Copy>(arr: &[T], duration: f64, res_arr: &mut IsoAndExpData) {
-        let arr = convert_array_to_f64(&arr);
-        let tick = duration / arr.len() as f64;
-        res_arr.add_vals(&arr, tick / 1000.0)
-    }
+fn get_iso_data(input: &TpInput) -> std::io::Result<TsScalarArr> {
+    let mut lum_data = TsScalarArr::new_with_capacity(10000);
 
     if let Some(ref samples) = input.samples {
         for info in samples {
@@ -137,32 +147,28 @@ fn get_iso_data(input: &TpInput) -> std::io::Result<IsoAndExpDataObj> {
 
 
             for (group, map) in grouped_tag_map {
-                if group == &GroupId::Custom("SensorISO".to_string()) {
-                    if let Some(taginfo) = map.get(&TagId::Data) {
-                        match &taginfo.value {
-                            TagValue::Vec_u32(arr) => add_isoexp_vals(arr.get(), duration, &mut iso_data),
-                            TagValue::Vec_u16(arr) => add_isoexp_vals(arr.get(), duration, &mut iso_data),
-                            _ => { dbg!("SensorISO NOT Vec_u32 or Vec_u16 !!!"); }
-                        }
-                    }
-                }
                 if group == &GroupId::Exposure {
                     if let Some(taginfo) = map.get(&TagId::Data) {
                         match &taginfo.value {
-                            TagValue::Vec_f32(arr) => add_isoexp_vals(arr.get(), duration, &mut exp_data),
-                            _ => { dbg!("EXPOSURE NOT Vec_u32 !!!"); }
+                            TagValue::Vec_f32(arr) => {
+                                let vals = convert_array_to_scaled_f64(arr.get(), 1000.);
+                                lum_data.add_vals_by_slice_duration_scaled(&vals, duration, 1000.);
+                            },
+                            // insta 360
+                            TagValue::Vec_TimeScalar_f64(arr) => {
+                                let vals = arr.get();
+                                let ts: Vec<f64> = vals.iter().map(|x| x.t).collect();
+                                let vs: Vec<f64> = vals.iter().map(|x| x.v * 1000.).collect();
+                                lum_data.add_vals_by_ts(&vs, &ts);
+                            },
+                            _ => { dbg!("NOT VALID EXPOSURE FORMAT!!!", &taginfo.value); }
                         }
                     }
                 }
             }
         }
     }
-    Ok(
-        IsoAndExpDataObj {
-            iso: iso_data,
-            exp: exp_data,
-        }
-    )
+    Ok(lum_data)
 }
 
 
@@ -187,8 +193,8 @@ pub fn parse_telemetry_from_mp4_file(src_file: &str) -> Result<TelemetryParsedDa
     // let samples = input.samples.clone().unwrap();
     // dump_samples(&samples[..2]);
 
-    let mut acc_data  : Vec<Vector3d> = Vec::new();
-    let mut gyro_data : Vec<Vector3d> = Vec::new();
+    let mut acc_data  = TsV3Arr::new_with_capacity(10000);
+    let mut gyro_data = TsV3Arr::new_with_capacity(10000);
 
     let imu_data = match tp_util::normalized_imu_interpolated(&input, None) {
         Ok(data) => data,
@@ -197,12 +203,14 @@ pub fn parse_telemetry_from_mp4_file(src_file: &str) -> Result<TelemetryParsedDa
 
     for v in imu_data {
         if v.accl.is_some() {
-            let accl = v.accl.unwrap_or_default();
-            acc_data.push(Vector3d::new(accl[0], accl[1], accl[2]));
+            let vals_arr = v.accl.unwrap_or_default();
+            acc_data.t.push(v.timestamp_ms);
+            acc_data.v.push(Vector3d::from(vals_arr));
         }
         if v.magn.is_some() {
-            let gyro = v.gyro.unwrap_or_default();
-            gyro_data.push(Vector3d::new(gyro[0], gyro[1], gyro[2]));
+            let vals_arr = v.gyro.unwrap_or_default();
+            gyro_data.t.push(v.timestamp_ms);
+            gyro_data.v.push(Vector3d::from(vals_arr));
         }
     }
 
@@ -211,7 +219,7 @@ pub fn parse_telemetry_from_mp4_file(src_file: &str) -> Result<TelemetryParsedDa
         file_name   : src_file.to_string(),
         acc_data,
         gyro_data,
-        iso_exp_data: iso_data.expect("no iso/exposure data found!"),
+        lumen_data: iso_data.expect("no iso/exposure data found!"),
     })
 }
 
@@ -223,7 +231,7 @@ pub fn get_result_metadata_for_file(input_file: &str) -> Result<TelemetryParsedD
         acc_data : telemetry_data.acc_data,
         gyro_data: telemetry_data.gyro_data,
         
-        iso_exp_data : telemetry_data.iso_exp_data,
+        lumen_data : telemetry_data.lumen_data,
     })
 }
 

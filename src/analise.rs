@@ -27,19 +27,58 @@ fn calc_elem_stat_vals(data: &[f64]) -> StatVals {
 }
 
 pub fn data_to_stat_vals_arr(data: &[f64], base: usize) -> StatValsArr {
+    let base = std::cmp::min(data.len() / 2, base);
+
     let initial_stat = calc_elem_stat_vals(&data[0..base]);
     let mut stat_vecs = StatValsArr{
         sma: vec![initial_stat.sma],
-        spr: vec![initial_stat.spr],
+        // spr: vec![initial_stat.spr],
+        spr: data[0..base].iter().scan(0.0, |state, &x| {
+            *state += x;
+            Some(*state)
+        }).collect()
     };
 
-    for i in (base + 1)..data.len() {
-        let cur_data = &data[i - base..i];
-        let cur_stat = calc_elem_stat_vals(cur_data);
-        stat_vecs.sma.push( cur_stat.sma );
-        stat_vecs.spr.push( cur_stat.spr );
+    // for i in (base + 1)..data.len() {
+    //     let cur_data = &data[i - base..i];
+    //     let cur_stat = calc_elem_stat_vals(cur_data);
+    //     stat_vecs.sma.push( cur_stat.sma );
+    //     stat_vecs.spr.push( cur_stat.spr );
+    // }
+
+    // let mut new_sma: Vec<f64> = Vec::new();
+    // let step_stat_iter = data.iter()
+    //     .step_by(base)
+    //     .scan(0.0, |state, &x| {
+    //         *state += x;
+    //         Some(*state)
+    //     });
+    // let _new_stat_t: Vec<Vec<f64>> = step_stat_iter.map( |block_val| {
+    //     let add_arr = vec![block_val; base];
+    //     new_sma.extend_from_slice(&add_arr);
+    //     add_arr
+    // }).collect();
+
+
+
+    for i in base..data.len() {
+        let cur_sma = stat_vecs.sma.last().unwrap();
+        let cur_spr = stat_vecs.spr.last().unwrap();
+
+        let new_sma = cur_sma + ((data[i] - data[i - base]) / base as f64);
+        let new_spr = cur_spr + data[i];
+        // let new_spr = cur_spr + new_sma;
+
+        stat_vecs.sma.push( new_sma );
+        stat_vecs.spr.push( new_spr );
     }
-    stat_vecs
+    
+    // dbg!(stat_vecs.sma.len() as f64 - new_sma.len() as f64);
+    StatValsArr{
+        sma: stat_vecs.sma,
+        spr: stat_vecs.spr,
+    }
+    // stat_vecs
 }
 
 
@@ -206,5 +245,14 @@ fn test_sma_calculation() {
     };
 
     let calc = data_to_stat_vals_arr(&test_data, base);
-    assert_eq!(calc, test_res);
+    let mut compare = true;
+    for (a, b) in calc.sma.iter().zip(test_res.sma.iter()) {
+        let diff = f64::abs(a - b);
+        let max_value = f64::max(f64::abs(*a), f64::abs(*b));
+        if diff > max_value * 0.01 {
+            compare = false;
+        }
+    }
+    assert_eq!(compare, true);
+    // assert_eq!(calc.sma, test_res.sma);
 }

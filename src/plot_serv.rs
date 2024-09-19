@@ -28,7 +28,7 @@ pub fn format_single_series_for_plot(data: &[f64], tick: &f64) -> (Vec<f64>, Vec
 pub fn gnu_plot_single_ts_data(ts: &[f64], data: &[f64], title: &str) {
     let mut fg = Figure::new();
     fg.axes2d()
-        .set_title(title, &[])
+        .set_title(&title.replace("_", " "), &[])
         .lines(ts, data, &[Color("black")]);
 
     std::thread::spawn(move || {
@@ -74,7 +74,7 @@ fn add_lines_for_v3d(fg_2d: &mut Axes2D, raw_series: &[(Vec<f64>, Vec<Vector3d>,
 
 pub fn gnu_plot_multi_ts_data(multi_ts_data: &[(Vec<f64>, Vec<f64>, impl Display, impl Display)], title: &str) {
     let mut fg: Figure = Figure::new();
-    let fg_2d = fg.axes2d().set_title(title, &[]);
+    let fg_2d = fg.axes2d().set_title(&title.replace("_", " "), &[]);
     
     add_lines_for_multi_ts_data(fg_2d, multi_ts_data);
     
@@ -89,7 +89,7 @@ pub fn gnu_plot_v3d_and_multi_ts_data(
     title        : &str,
 ) {
     let mut fg: Figure = Figure::new();
-    let fg_2d = fg.axes2d().set_title(title, &[]);
+    let fg_2d = fg.axes2d().set_title(&title.replace("_", " "), &[]);
 
     add_lines_for_v3d(fg_2d, v3d_data);
     add_lines_for_multi_ts_data(fg_2d, &multi_ts_data);

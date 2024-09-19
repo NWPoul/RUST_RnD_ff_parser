@@ -94,13 +94,16 @@ impl Vector3d {
 }
 
 impl From<(f64, f64, f64)> for Vector3d {
-    fn from(tuple: (f64, f64, f64)) -> Self {
-        Self { x: tuple.0, y: tuple.1, z: tuple.2 }
+    fn from(input: (f64, f64, f64)) -> Self {
+        Self { x: input.0, y: input.1, z: input.2 }
     }
 }
-impl From<[f64,3]> for Vector3d {
-    fn from(tuple: (f64, f64, f64)) -> Self {
-        Self { x: tuple.0, y: tuple.1, z: tuple.2 }
+impl From<[f64; 3]> for Vector3d {
+    fn from(input: [f64; 3]) -> Self {
+        // if input.len() < 3 {
+        //     panic!("Input array/slice must have at least three elements");
+        // }
+        Self { x: input[0], y: input[1], z: input[2] }
     }
 }
 
