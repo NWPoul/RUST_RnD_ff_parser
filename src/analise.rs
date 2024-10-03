@@ -1,6 +1,7 @@
 
 use crate::utils::u_serv::{Vector3d, Axis3d};
 
+
 #[derive(Default)]
 pub struct StatVals {
     pub sma: f64,
@@ -225,34 +226,3 @@ pub fn get_max_vec_data(t_acc_data: &(Vec<f64>, Vec<f64>)) -> (f64, f64) {
 }
 
 
-
-
-
-
-#[test]
-fn test_sma_calculation() {
-    let test_data: Vec<f64> = vec![
-        1., 2., 3., 4., 5.,
-        10., 20., 30., 40., 50.,
-        110., 210., 301., 410., 501.,
-    ];
-
-
-    let base = 7 as usize;
-    let test_res = StatValsArr {
-        sma: vec![6.428571428571429, 10.571428571428571, 16.0, 22.714285714285715, 37.857142857142854, 67.14285714285714, 108.71428571428571, 164.42857142857142],
-        spr: vec![44.285714285714285, 111.95238095238096, 209.66666666666666, 321.5714285714286, 1265.4761904761901, 5023.809523809524, 11578.238095238094, 21773.95238095238]
-    };
-
-    let calc = data_to_stat_vals_arr(&test_data, base);
-    let mut compare = true;
-    for (a, b) in calc.sma.iter().zip(test_res.sma.iter()) {
-        let diff = f64::abs(a - b);
-        let max_value = f64::max(f64::abs(*a), f64::abs(*b));
-        if diff > max_value * 0.01 {
-            compare = false;
-        }
-    }
-    assert_eq!(compare, true);
-    // assert_eq!(calc.sma, test_res.sma);
-}

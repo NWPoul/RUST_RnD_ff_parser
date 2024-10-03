@@ -8,6 +8,7 @@ pub mod utils {
 
 pub mod macros;
 pub mod analise;
+pub mod analise_ev_rnd;
 
 pub mod telemetry_parser_serv;
 pub mod file_sys_serv;
@@ -20,7 +21,15 @@ mod cli_config;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use analise::{calc_velocity_arr, data_to_stat_vals_arr, v3d_list_to_magnitude_sma_list, v3d_list_to_magnitude_smaspr_list, v3d_list_to_plainsum_sma_list, v3d_list_to_ts_sma_v3d_list};
+use analise::{
+    calc_velocity_arr,
+    data_to_stat_vals_arr,
+    v3d_list_to_magnitude_sma_list,
+    v3d_list_to_magnitude_smaspr_list,
+    v3d_list_to_plainsum_sma_list,
+    v3d_list_to_ts_sma_v3d_list
+};
+use analise_ev_rnd::stft_result_analise;
 // use file_sys_serv::{save_det_log_to_txt, save_sma_log_to_txt};
 use lazy_static::lazy_static;
 
@@ -220,6 +229,13 @@ fn plot_iso_series(data: &TsScalarArr, base_series: &[usize], title: &str) {
 
 
 
+fn calculate_deployment(data: &[Vector3d], base_series: &[usize]) {
+    for base in base_series {
+        let cur_magnitude_sma = v3d_list_to_magnitude_sma_list(data, *base);
+        stft_result_analise(&cur_magnitude_sma.1, *base)
+    }
+}
+
 
 fn main() {
     let mut config_values = get_config_values();
@@ -241,11 +257,16 @@ fn main() {
             for res in parsing_result {
                 match res {
                     Ok(res_data) => {
-                        // plot_parsed_analised_base_series(
-                        //     &res_data.acc_data.vals,
-                        //     &base_series,
-                        //     &res_data.file_name,
-                        // );
+                        plot_parsed_analised_base_series(
+                            &res_data.acc_data.v,
+                            &base_series,
+                            &res_data.file_name,
+                        );
+
+                        calculate_deployment(
+                            &res_data.acc_data.v,
+                            &base_series,
+                        );
 
                         // plot_parsed_analised_base_series(
                         //     &res_data.gyro_data,
@@ -275,4 +296,5 @@ fn main() {
             input_sma_base();
     }
 }
+
 
