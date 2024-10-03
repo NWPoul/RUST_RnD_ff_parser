@@ -258,11 +258,11 @@ fn main() {
             for res in parsing_result {
                 match res {
                     Ok(res_data) => {
-                        plot_parsed_analised_base_series(
-                            &res_data.acc_data.v,
-                            &base_series,
-                            &res_data.file_name,
-                        );
+                        // plot_parsed_analised_base_series(
+                        //     &res_data.acc_data.v,
+                        //     &base_series,
+                        //     &res_data.file_name,
+                        // );
 
                         calculate_deployment(
                             &res_data.acc_data.v,
