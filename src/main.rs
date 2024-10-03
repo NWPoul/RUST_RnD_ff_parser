@@ -229,7 +229,8 @@ fn plot_iso_series(data: &TsScalarArr, base_series: &[usize], title: &str) {
 
 
 
-fn calculate_deployment(data: &[Vector3d], base_series: &[usize]) {
+fn calculate_deployment(data: &[Vector3d], base_series: &[usize], title: &str) {
+    println!("{}", title);
     for base in base_series {
         let cur_magnitude_sma = v3d_list_to_magnitude_sma_list(data, *base);
         stft_result_analise(&cur_magnitude_sma.1, *base)
@@ -266,6 +267,7 @@ fn main() {
                         calculate_deployment(
                             &res_data.acc_data.v,
                             &base_series,
+                            &res_data.file_name,
                         );
 
                         // plot_parsed_analised_base_series(
