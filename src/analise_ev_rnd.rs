@@ -75,8 +75,8 @@ pub fn stft_result_analise(sma_data: &[f64], sma_base: usize) {
         }
 
         if top_n.len() < top_cnt {
-            top_n.push((max_magnitude_in_spectrum, time_idx, max_frequency_in_spectrum));
-            top_n.sort_by_key(|&(_, time, _)| time);
+            let pos = top_n.binary_search_by_key(&time_idx, |&(_, time, _)| time).unwrap_or_else(|pos| pos);
+            top_n.insert(pos, (max_magnitude_in_spectrum, time_idx, max_frequency_in_spectrum));
         } else if time_idx > top_n[top_cnt-1].1 {
             top_n[4] = (max_magnitude_in_spectrum, time_idx, max_frequency_in_spectrum);
         }
