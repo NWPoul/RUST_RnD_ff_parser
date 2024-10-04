@@ -85,7 +85,7 @@ pub fn stft_result_analise(sma_data: &[f64], sma_base: usize) {
     println!("sma_base: {}", sma_base);
     println!("OLD_RESULT: Time {}, MaxAcc {}", old_result.time, old_result.acc);
     for (i, (magnitude, time_idx, frequency)) in top_n.iter().enumerate() {
-        println!("NEW_RESULT: Top {}: Time: {} seconds, Magnitude: {}, Frequency: {} Hz", 
+        println!("NEW_RESULT: Top {}: Time: {} sec., Magnitude: {}, Freq.: {} Hz", 
                 i + 1,
                 *time_idx as f64 * time_resolution,
                 magnitude,
